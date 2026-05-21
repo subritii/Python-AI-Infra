@@ -10,7 +10,7 @@ def call_llm_sync(prompt: str)-> str:
 # An asynchronouse function to make an API call
 async def call_llm_async(prompt: str) -> str:
     async with httpx.AsyncClient as client:
-        response = await client.post("https://api.example.com/llm", json={"model": "gpt-4o-mini", "messages": [{"role": "user", "content": prompt}]}, headers={"Authorization": f"Bearer {API_KEY}"})
+        response = await client.post("https://api.example.com/llm", json={"model": "llama3.2", "messages": [{"role": "user", "content": prompt}]}, headers={"Authorization": f"Bearer {API_KEY}"})
         return response.json()["choices"][0]["message"]["content"]
 
 async def main():
