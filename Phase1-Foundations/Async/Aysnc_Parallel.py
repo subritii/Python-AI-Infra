@@ -3,12 +3,13 @@
 
 import httpx
 import asyncio
+from config import API_KEY
 
 async def call_llm_async(client: httpx.AsyncClient, prompt: str) -> str:
-    response = await client.post("https://api.openai.com/v1/chat/completions",
-        json={"model": "llama3.2", "messages": [{"role": "user", "content": prompt}]},
+    response = await client.post("https://api.groq.com/openai/v1/chat/completions",
+        json={"model": "llama-3.3-70b-versatile", "messages": [{"role": "user", "content": prompt}]},
         headers={"Authorization": f"Bearer {API_KEY}"})
-    r.raise_for_status()
+    response.raise_for_status()
     return response.json()["choices"][0]["message"]["content"]
 
 async def main():
