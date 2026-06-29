@@ -1,0 +1,39 @@
+- id: tc_001
+  topic: async/await
+  prompt: "What does async def do in Python?"
+  expected_output: "async def marks a function as a coroutine"
+  metric: llm_judge
+  difficulty: 1
+  tags: [python, async]
+
+- id: tc_002
+  topic: tokenization
+  prompt: "What is a token in LLMs?"
+  expected_output: "A token is a chunk of text that LLMs process, smaller than a word"
+  metric: llm_judge
+  difficulty: 1
+  tags: [llm, concepts]
+
+- id: tc_003
+  topic: temperature
+  prompt: "What does temperature control in LLMs?"
+  expected_output: "Temperature controls randomness in token sampling"
+  metric: llm_judge
+  difficulty: 1
+  tags: [llm, sampling]
+
+- id: tc_004
+  topic: context_window
+  prompt: "What is a context window?"
+  expected_output: "The maximum number of tokens an LLM can process in one request"
+  metric: llm_judge
+  difficulty: 2
+  tags: [llm, concepts]
+
+- id: tc_005
+  topic: hallucination
+  prompt: "What is an LLM hallucination?"
+  expected_output: "When an LLM generates confident but factually incorrect output"
+  metric: llm_judge
+  difficulty: 2
+  tags: [llm, concepts]

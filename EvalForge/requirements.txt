@@ -1,0 +1,10 @@
+anthropic
+pydantic
+asyncpg
+pyyaml
+python-dotenv
+pytest
+pytest-asyncio
+numpy
+nltk
+httpx
