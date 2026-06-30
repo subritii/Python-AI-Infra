@@ -3,7 +3,7 @@
 
 import httpx
 import asyncio
-from config import API_KEY
+from LearningMaterials.config import API_KEY
 
 async def call_llm_async(client: httpx.AsyncClient, prompt: str) -> str:
     response = await client.post("https://api.groq.com/openai/v1/chat/completions",

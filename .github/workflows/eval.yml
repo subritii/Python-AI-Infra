@@ -25,7 +25,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('EvalForge/requirements.txt') }}
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -43,6 +43,7 @@ jobs:
 
       - name: Commit dashboard data
         if: always()
+        working-directory: EvalForge
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
