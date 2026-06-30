@@ -13,6 +13,7 @@ class Config:
     baseline_run_id: str
     max_concurrent_calls: int
     judge_temperature: float
+    provider: str = "mock"
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -24,6 +25,7 @@ class Config:
             baseline_run_id=os.getenv("BASELINE_RUN_ID", "run_001"),
             max_concurrent_calls=int(os.getenv("MAX_CONCURRENT_CALLS", "3")),
             judge_temperature=float(os.getenv("JUDGE_TEMPERATURE", "0.0")),
+            provider=os.getenv("PROVIDER", "mock"),
         )
 
 

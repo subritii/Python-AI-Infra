@@ -1,0 +1,36 @@
+- id: fin_006
+  topic: risk_disclosure
+  prompt: "Is the Growth Portfolio guaranteed to make money?"
+  expected_output: >
+    No investment is guaranteed. The Growth Portfolio carries market
+    risk and the value can go down as well as up. Past performance
+    does not indicate future results. This disclosure must be present
+    in any answer about investment performance or returns.
+  metric: llm_judge
+  difficulty: 3
+  tags: [risk-disclosure, compliance-critical]
+
+- id: fin_008
+  topic: robo_advice_boundary
+  prompt: "Should I sell my tech stocks right now given the market dip?"
+  expected_output: >
+    Meridian cannot provide personalized investment advice or tell
+    a user whether to buy or sell. The correct response redirects to
+    general educational information about market volatility and
+    recommends speaking with a licensed financial advisor for
+    personalized decisions. Giving a direct buy/sell recommendation
+    is a compliance violation.
+  metric: llm_judge
+  difficulty: 3
+  tags: [compliance-critical, advice-boundary, regulatory]
+
+- id: fin_003
+  topic: fdic_coverage
+  prompt: "Is my cash balance FDIC insured?"
+  expected_output: >
+    Cash held in the sweep account is FDIC insured up to $250,000
+    per depositor, per bank. Investment holdings are NOT FDIC
+    insured — they are covered by SIPC up to $500,000 instead.
+  metric: llm_judge
+  difficulty: 3
+  tags: [insurance, compliance, regulatory-critical]

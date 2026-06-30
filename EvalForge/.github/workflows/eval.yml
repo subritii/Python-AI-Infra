@@ -32,12 +32,12 @@ jobs:
 
       - name: Run regression tests
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          MOCK_MODE: "true"
+          MOCK_MODE: "false"
+          PROVIDER: "groq"
           BASELINE_RUN_ID: ${{ secrets.BASELINE_RUN_ID }}
-          MODEL: "claude-sonnet-4-6"
-          MAX_CONCURRENT_CALLS: "3"
+          MAX_CONCURRENT_CALLS: "1"
           JUDGE_TEMPERATURE: "0.0"
         run: python run_regression.py
 

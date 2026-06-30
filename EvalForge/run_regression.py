@@ -8,7 +8,7 @@ from evalforge.config import config
 
 async def run_regression(baseline_run_id: str = None) -> bool:
     pool         = await get_pool()
-    test_cases   = load_test_cases("test_cases/phase3.yaml")
+    test_cases   = load_test_cases("test_cases/meridian_advisor.yaml")
 
     print(f"Running {len(test_cases)} test cases...")
     run = await run_all(test_cases)
