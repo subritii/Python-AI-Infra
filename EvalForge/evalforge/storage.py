@@ -1,3 +1,6 @@
+
+import json
+import os
 import asyncpg
 from evalforge.models import EvalRun, EvalResult
 from evalforge.config import config
@@ -67,3 +70,54 @@ async def get_run_results(run_id: str, pool) -> list:
             ORDER BY test_id
         """, run_id)
         return [dict(row) for row in rows]
+    
+
+async def export_dashboard_data(pool, baseline_run_id: str, output_path: str = "docs/dashboard_data.json"):
+    recent_runs   = await get_recent_runs(20, pool)
+    baseline      = await load_baseline(baseline_run_id, pool)
+
+    if not recent_runs:
+        return
+
+    latest = recent_runs[0]
+    latest_results = await get_run_results(latest["run_id"], pool)
+
+    regressions = []
+    for r in latest_results:
+        if r["test_id"] in baseline:
+            drop = baseline[r["test_id"]] - r["score"]
+            if drop >= 1.0:
+                regressions.append({
+                    "test_id":        r["test_id"],
+                    "baseline_score": baseline[r["test_id"]],
+                    "current_score":  r["score"],
+                    "drop":           round(drop, 1),
+                    "reasoning":      r["reasoning"]
+                })
+
+    data = {
+        "generated_at": str(latest["created_at"]),
+        "baseline_run_id": baseline_run_id,
+        "status": {
+            "latest_run_id": latest["run_id"],
+            "pass_rate": latest["pass_rate"],
+            "avg_score": latest["avg_score"],
+            "total_cost": latest["total_cost"],
+        },
+        "runs": [
+            {
+                "run_id": r["run_id"],
+                "created_at": str(r["created_at"]),
+                "model_version": r["model_version"],
+                "pass_rate": r["pass_rate"],
+                "avg_score": r["avg_score"],
+                "total_cost": r["total_cost"],
+            }
+            for r in recent_runs
+        ],
+        "active_regressions": regressions
+    }
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, "w") as f:
+        json.dump(data, f, indent=2)

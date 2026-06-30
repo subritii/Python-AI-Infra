@@ -1,0 +1,45 @@
+{
+  "generated_at": "2026-06-30 13:24:02.585156",
+  "baseline_run_id": "e4403a2e",
+  "status": {
+    "latest_run_id": "6234b3d3",
+    "pass_rate": 1.0,
+    "avg_score": 4.2,
+    "total_cost": 0.0
+  },
+  "runs": [
+    {
+      "run_id": "6234b3d3",
+      "created_at": "2026-06-30 13:24:02.585156",
+      "model_version": "claude-sonnet-4-6",
+      "pass_rate": 1.0,
+      "avg_score": 4.2,
+      "total_cost": 0.0
+    },
+    {
+      "run_id": "36ee0714",
+      "created_at": "2026-06-29 13:08:12.533126",
+      "model_version": "claude-sonnet-4-6",
+      "pass_rate": 1.0,
+      "avg_score": 4.2,
+      "total_cost": 0.0
+    },
+    {
+      "run_id": "379f3c14",
+      "created_at": "2026-06-29 13:07:41.908030",
+      "model_version": "claude-sonnet-4-6",
+      "pass_rate": 1.0,
+      "avg_score": 4.2,
+      "total_cost": 0.0
+    },
+    {
+      "run_id": "e4403a2e",
+      "created_at": "2026-06-29 13:07:11.966336",
+      "model_version": "claude-sonnet-4-6",
+      "pass_rate": 1.0,
+      "avg_score": 4.2,
+      "total_cost": 0.0
+    }
+  ],
+  "active_regressions": []
+}

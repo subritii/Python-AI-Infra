@@ -2,8 +2,9 @@ import asyncio
 import sys
 from evalforge.models import load_test_cases
 from evalforge.runner import run_all
-from evalforge.storage import get_pool, save_run, load_baseline
+from evalforge.storage import get_pool, save_run, load_baseline, export_dashboard_data
 from evalforge.config import config
+
 
 async def run_regression(baseline_run_id: str = None) -> bool:
     pool         = await get_pool()
@@ -21,6 +22,7 @@ async def run_regression(baseline_run_id: str = None) -> bool:
     if baseline_run_id is None:
         print("\nNo baseline set — this run will be the baseline.")
         print(f"Set BASELINE_RUN_ID={run.run_id} in .env to use it.")
+        await export_dashboard_data(pool, run.run_id)
         await pool.close()
         return True
 
@@ -29,6 +31,7 @@ async def run_regression(baseline_run_id: str = None) -> bool:
 
     if not baseline:
         print("Baseline run not found in database.")
+        await export_dashboard_data(pool, run.run_id)
         await pool.close()
         return True
 
@@ -56,8 +59,10 @@ async def run_regression(baseline_run_id: str = None) -> bool:
     else:
         print("\n✅ No regressions detected.")
 
+    await export_dashboard_data(pool, baseline_run_id)
     await pool.close()
     return len(regressions) == 0
+
 
 async def main():
     passed = await run_regression(config.baseline_run_id)
