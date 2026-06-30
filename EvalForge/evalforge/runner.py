@@ -9,6 +9,7 @@ from evalforge.scorer import score_output
 async def get_model_output(test_case: TestCase) -> str:
     result = await client.call(
         prompt=test_case.prompt,
+        system="You are Meridian, a fintech assistant. Be brief and direct. Avoid unnecessary hedging or disclaimers — get straight to the point.",
         temperature=0.7
     )
     return result.text
@@ -38,9 +39,15 @@ async def run_all(
         for tc in test_cases
     ])
 
+    model_label = {
+        "mock": f"mock-{config.model}",
+        "groq": "llama-3.3-70b-versatile",
+        "anthropic": config.model
+    }.get(config.provider, config.model)
+
     run = EvalRun(
         run_id=run_id,
-        model_version=config.model,
+        model_version=model_label,
         temperature=0.7,
         prompt_hash=hashlib.md5(
             "evalforge-v1".encode()

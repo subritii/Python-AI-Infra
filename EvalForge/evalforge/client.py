@@ -21,9 +21,10 @@ class EvalForgeClient:
     def __init__(self):
         self.mock_mode = config.mock_mode
         self.model     = config.model
+        self.provider  = config.provider
         self._client   = None
 
-        if not self.mock_mode:
+        if not self.mock_mode and self.provider == "anthropic":
             import anthropic
             self._client = anthropic.AsyncAnthropic()
 
@@ -79,6 +80,38 @@ class EvalForgeClient:
             stop_reason=response.stop_reason
         )
     
+    async def _groq_call(self, prompt: str, system: str = "") -> APIResponse:
+        from openai import AsyncOpenAI
+
+        groq_client = AsyncOpenAI(
+            api_key=os.getenv("GROQ_API_KEY"),
+            base_url="https://api.groq.com/openai/v1"
+        )
+
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+
+        response = await groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=messages,
+            max_tokens=1024
+        )
+
+        text = response.choices[0].message.content
+        input_tokens  = response.usage.prompt_tokens
+        output_tokens = response.usage.completion_tokens
+
+        return APIResponse(
+            text=text,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cost_usd=0.0,
+            model="llama-3.3-70b-versatile",
+            stop_reason="end_turn"
+        )
+    
     async def call(
         self,
         prompt: str,
@@ -89,6 +122,8 @@ class EvalForgeClient:
 
         if self.mock_mode:
             return self._mock_call(prompt, system)
+        if self.provider == "groq":
+            return await self._groq_call(prompt, system)
         return await self._real_call(prompt, system, temperature, max_tokens)
     
 
