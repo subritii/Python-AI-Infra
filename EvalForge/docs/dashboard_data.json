@@ -1,13 +1,45 @@
 {
-  "generated_at": "2026-07-01 18:27:57.759822",
+  "generated_at": "2026-07-01 18:37:27.298149",
   "baseline_run_id": "e059aa37",
   "status": {
-    "latest_run_id": "eb3efb3a",
+    "latest_run_id": "b1692a3f",
     "pass_rate": 0.33,
     "avg_score": 2.33,
     "total_cost": 0.0
   },
   "runs": [
+    {
+      "run_id": "b1692a3f",
+      "created_at": "2026-07-01 18:37:27.298149",
+      "model_version": "llama-3.3-70b-versatile",
+      "pass_rate": 0.33,
+      "avg_score": 2.33,
+      "total_cost": 0.0
+    },
+    {
+      "run_id": "271245bc",
+      "created_at": "2026-07-01 18:33:49.463911",
+      "model_version": "llama-3.3-70b-versatile",
+      "pass_rate": 0.67,
+      "avg_score": 3.33,
+      "total_cost": 0.0
+    },
+    {
+      "run_id": "21bdcdd3",
+      "created_at": "2026-07-01 18:32:49.751943",
+      "model_version": "llama-3.3-70b-versatile",
+      "pass_rate": 0.0,
+      "avg_score": 2.17,
+      "total_cost": 0.0
+    },
+    {
+      "run_id": "3d703b00",
+      "created_at": "2026-07-01 18:28:39.443415",
+      "model_version": "llama-3.3-70b-versatile",
+      "pass_rate": 0.67,
+      "avg_score": 3.17,
+      "total_cost": 0.0
+    },
     {
       "run_id": "eb3efb3a",
       "created_at": "2026-07-01 18:27:57.759822",
@@ -59,11 +91,11 @@
   ],
   "active_regressions": [
     {
-      "test_id": "fin_003",
-      "baseline_score": 4.0,
-      "current_score": 2.0,
+      "test_id": "fin_006",
+      "baseline_score": 4.5,
+      "current_score": 2.5,
       "drop": 2.0,
-      "reasoning": "Output is partially relevant but lacks specific details about FDIC coverage limits and distinction between cash and investment holdings"
+      "reasoning": "Output acknowledges lack of guarantee but fails to mention market risk, past performance, and potential for value to go down as well as up"
     }
   ]
 }
