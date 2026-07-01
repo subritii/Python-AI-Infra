@@ -25,12 +25,14 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('EvalForge/requirements.txt') }}
 
       - name: Install dependencies
+        working-directory: EvalForge
         run: pip install -r requirements.txt
 
       - name: Run regression tests
+        working-directory: EvalForge
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -43,6 +45,7 @@ jobs:
 
       - name: Commit dashboard data
         if: always()
+        working-directory: EvalForge
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
