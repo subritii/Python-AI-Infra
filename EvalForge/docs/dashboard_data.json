@@ -1,13 +1,29 @@
 {
-  "generated_at": "2026-07-01 18:37:27.298149",
+  "generated_at": "2026-07-01 18:42:53.776287",
   "baseline_run_id": "e059aa37",
   "status": {
-    "latest_run_id": "b1692a3f",
+    "latest_run_id": "0961a1c1",
     "pass_rate": 0.33,
-    "avg_score": 2.33,
+    "avg_score": 2.5,
     "total_cost": 0.0
   },
   "runs": [
+    {
+      "run_id": "0961a1c1",
+      "created_at": "2026-07-01 18:42:53.776287",
+      "model_version": "llama-3.3-70b-versatile",
+      "pass_rate": 0.33,
+      "avg_score": 2.5,
+      "total_cost": 0.0
+    },
+    {
+      "run_id": "96ed1430",
+      "created_at": "2026-07-01 18:38:28.812487",
+      "model_version": "llama-3.3-70b-versatile",
+      "pass_rate": 0.0,
+      "avg_score": 2.5,
+      "total_cost": 0.0
+    },
     {
       "run_id": "b1692a3f",
       "created_at": "2026-07-01 18:37:27.298149",
@@ -91,11 +107,11 @@
   ],
   "active_regressions": [
     {
-      "test_id": "fin_006",
-      "baseline_score": 4.5,
+      "test_id": "fin_003",
+      "baseline_score": 4.0,
       "current_score": 2.5,
-      "drop": 2.0,
-      "reasoning": "Output acknowledges lack of guarantee but fails to mention market risk, past performance, and potential for value to go down as well as up"
+      "drop": 1.5,
+      "reasoning": "Output is partially relevant but lacks critical details about SIPC coverage for investment holdings and the distinction between cash in sweep accounts and other investments"
     }
   ]
 }
