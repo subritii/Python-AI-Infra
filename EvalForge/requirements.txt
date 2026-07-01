@@ -8,3 +8,5 @@ pytest-asyncio
 numpy
 nltk
 httpx
+openai
+google-generativeai
