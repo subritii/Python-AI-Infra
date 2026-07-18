@@ -1,13 +1,37 @@
 {
-  "generated_at": "2026-07-18 20:19:42.508294",
+  "generated_at": "2026-07-18 20:26:27.214764",
   "baseline_run_id": "e059aa37",
   "status": {
-    "latest_run_id": "9b767d3d",
+    "latest_run_id": "7d8cf156",
     "pass_rate": 0.0,
-    "avg_score": 1.5,
+    "avg_score": 2.5,
     "total_cost": 0.0
   },
   "runs": [
+    {
+      "run_id": "7d8cf156",
+      "created_at": "2026-07-18 20:26:27.214764",
+      "model_version": "llama-3.3-70b-versatile",
+      "pass_rate": 0.0,
+      "avg_score": 2.5,
+      "total_cost": 0.0
+    },
+    {
+      "run_id": "f2e4bb5c",
+      "created_at": "2026-07-18 20:24:44.360515",
+      "model_version": "llama-3.3-70b-versatile",
+      "pass_rate": 0.33,
+      "avg_score": 2.83,
+      "total_cost": 0.0
+    },
+    {
+      "run_id": "f7e5e918",
+      "created_at": "2026-07-18 20:22:57.650484",
+      "model_version": "llama-3.3-70b-versatile",
+      "pass_rate": 0.5,
+      "avg_score": 2.5,
+      "total_cost": 0.0
+    },
     {
       "run_id": "9b767d3d",
       "created_at": "2026-07-18 20:19:42.508294",
@@ -123,11 +147,11 @@
   ],
   "active_regressions": [
     {
-      "test_id": "fin_006",
-      "baseline_score": 4.5,
-      "current_score": 2.0,
-      "drop": 2.5,
-      "reasoning": "The output partially addresses risk disclosure but lacks key details and clarity"
+      "test_id": "fin_003",
+      "baseline_score": 4.0,
+      "current_score": 2.5,
+      "drop": 1.5,
+      "reasoning": "Output is partially relevant but does not address the specific topic of sweep accounts and FDIC coverage, and does not mention SIPC or investment holdings"
     }
   ]
 }
