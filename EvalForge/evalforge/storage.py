@@ -95,7 +95,7 @@ async def export_dashboard_data(
     pool,
     baseline_run_id: str,
     output_path: str = "docs/dashboard_data.json",
-    test_ids: list = None,
+    test_cases: list = None,
     limit: int = 50
 ):
     recent_runs = await get_recent_runs(limit, pool)
@@ -103,8 +103,8 @@ async def export_dashboard_data(
     results     = await get_results_for_runs([r["run_id"] for r in recent_runs], pool)
 
     # eval_runs is shared by every suite; keep only runs of the suite being exported.
-    if test_ids is not None:
-        wanted      = set(test_ids)
+    if test_cases is not None:
+        wanted      = {tc.id for tc in test_cases}
         recent_runs = [
             r for r in recent_runs
             if any(x["test_id"] in wanted for x in results.get(r["run_id"], []))
@@ -153,7 +153,17 @@ async def export_dashboard_data(
             }
             for r in recent_runs
         ],
-        "active_regressions": regressions
+        "active_regressions": regressions,
+        "tests": [
+            {
+                "id": tc.id,
+                "topic": tc.topic,
+                "prompt": tc.prompt,
+                "expected_output": tc.expected_output.strip(),
+                "tags": tc.tags,
+            }
+            for tc in (test_cases or [])
+        ]
     }
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)

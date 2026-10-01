@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EvalForge Dashboard</title>
-<meta name="description" content="LLM regression-testing dashboard: per-test judge scores across runs, model and prompt changes, and active regressions.">
+<title>EvalForge</title>
+<meta name="description" content="EvalForge: regression testing for LLM apps. An LLM judge scores every answer, and CI fails when quality drops. See it catch a real regression.">
 <style>
   :root {
     color-scheme: light;
@@ -16,7 +16,8 @@
     --grid:       #e1e0d9;
     --axis:       #c3c2b7;
     --border:     rgba(11,11,11,0.10);
-    --wash:       rgba(11,11,11,0.035);
+    --wash:       rgba(11,11,11,0.04);
+    --accent:     #2a78d6;
     --series-1:   #2a78d6;
     --series-2:   #eb6834;
     --series-3:   #1baf7a;
@@ -24,6 +25,7 @@
     --good-text:  #006300;
     --critical:   #d03b3b;
     --critical-text: #b42318;
+    --code-bg:    #f0efec;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -37,11 +39,13 @@
       --axis:       #383835;
       --border:     rgba(255,255,255,0.10);
       --wash:       rgba(255,255,255,0.05);
+      --accent:     #3987e5;
       --series-1:   #3987e5;
       --series-2:   #d95926;
       --series-3:   #199e70;
       --good-text:  #0ca30c;
       --critical-text: #f07070;
+      --code-bg:    #232322;
     }
   }
   :root[data-theme="dark"] {
@@ -55,162 +59,241 @@
     --axis:       #383835;
     --border:     rgba(255,255,255,0.10);
     --wash:       rgba(255,255,255,0.05);
+    --accent:     #3987e5;
     --series-1:   #3987e5;
     --series-2:   #d95926;
     --series-3:   #199e70;
     --good-text:  #0ca30c;
     --critical-text: #f07070;
+    --code-bg:    #232322;
   }
 
   * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--page);
-    color: var(--ink);
-    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
-  }
-  main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 48px; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body { margin: 0; background: var(--page); color: var(--ink);
+         font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1080px; margin: 0 auto; padding: 0 16px 56px; }
   a { color: inherit; text-underline-offset: 2px; }
-  h1 { font-size: 26px; line-height: 1.2; margin: 4px 0 8px; font-weight: 650; }
-  h2 { font-size: 16px; margin: 0 0 4px; font-weight: 600; }
-  .eyebrow { color: var(--ink-2); font-size: 13px; font-weight: 600; letter-spacing: .02em; }
-  .lede { color: var(--ink-2); margin: 0 0 16px; max-width: 720px; }
-  .sub { color: var(--ink-2); font-size: 13px; margin: 0 0 16px; }
-  .meta { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; color: var(--ink-2); font-size: 13px; }
-  .meta code, td code, .mono { font: 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  code, pre, .mono { font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 8px 0 14px; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+  h2 { font-size: 24px; line-height: 1.25; margin: 0 0 6px; font-weight: 650; }
+  h3 { font-size: 16px; margin: 0 0 4px; font-weight: 600; }
+  section.block { padding-top: 56px; }
+  .kicker { color: var(--accent); font-size: 13px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+  .lede { color: var(--ink-2); font-size: 17px; margin: 0; max-width: 640px; }
+  .sub { color: var(--ink-2); margin: 0 0 20px; max-width: 720px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
 
-  .badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px;
-           padding: 3px 10px 3px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); }
-  .badge .dot { width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center;
-                color: #fff; font-size: 11px; line-height: 1; }
-  .badge.good .dot { background: var(--good); }
-  .badge.bad  .dot { background: var(--critical); }
+  /* Hero */
+  .hero { display: grid; grid-template-columns: 1.5fr 1fr; gap: 32px; align-items: center; padding-top: 48px; }
+  .cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 8px; font-weight: 600;
+         font-size: 14px; text-decoration: none; border: 1px solid var(--border); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .btn.primary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  .btn:focus-visible, .chap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .status-card .row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--grid); font-size: 14px; }
+  .status-card .row span:first-child { color: var(--ink-2); }
+  .status-card .big { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 650; margin: 2px 0 10px; }
+  .status-card .label { color: var(--ink-2); font-size: 13px; }
 
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-top: 16px; }
-  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 24px; }
+  .icon { width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center; color: #fff;
+          font-size: 13px; font-weight: 700; flex: none; }
+  .icon.sm { width: 16px; height: 16px; font-size: 10px; }
+  .icon.good { background: var(--good); }
+  .icon.bad  { background: var(--critical); }
+
+  /* Pipeline */
+  .pipeline { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .step { display: flex; flex-direction: column; }
+  .step .n { width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: var(--surface);
+             display: inline-grid; place-items: center; font-size: 12px; font-weight: 700; margin-bottom: 10px; }
+  .step p { color: var(--ink-2); margin: 0 0 12px; font-size: 14px; }
+  .artifact { margin-top: auto; background: var(--code-bg); border-radius: 8px; padding: 10px 12px; overflow-x: auto; }
+  .artifact pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+
+  /* Story */
+  .chapters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .chap { flex: 1 1 150px; text-align: left; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
+          background: var(--surface); color: var(--ink-2); cursor: pointer; font: inherit; font-size: 13px; line-height: 1.35; }
+  .chap b { display: block; color: var(--ink); font-size: 13.5px; }
+  .chap[aria-selected="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); color: var(--ink); }
+  .story { display: grid; grid-template-columns: 1.45fr 1fr; gap: 16px; align-items: start; }
+  .story-text h3 { font-size: 19px; margin: 2px 0 8px; }
+  .story-text p { margin: 0 0 12px; color: var(--ink-2); }
+  .verdict { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-top: 4px; }
+  .verdict .head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-weight: 650; }
+  .verdict .head small { color: var(--muted); font-weight: 500; }
+  .verdict ul { list-style: none; padding: 0; margin: 8px 0 0; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  .verdict li { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  .verdict li .t { flex: 1; color: var(--ink-2); }
+  .quote { margin: 12px 0 0; color: var(--ink-2); font-size: 14px; border-left: 2px solid var(--grid); padding-left: 12px; }
+  .quote cite { display: block; font-style: normal; color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .nav { display: flex; justify-content: space-between; margin-top: 16px; }
+  .up   { color: var(--good-text); }
+  .down { color: var(--critical-text); }
+  .flat { color: var(--muted); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--ink-2); margin: 0 0 6px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .key-line { width: 16px; height: 2px; border-radius: 1px; display: inline-block; }
+  .key-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 2px solid var(--muted); }
+  .swatch { width: 10px; height: 10px; border-radius: 50%; flex: none; display: inline-block; }
+  .chart-wrap { position: relative; }
+  .chart-wrap svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart-wrap svg:focus { outline: none; }
+  .chart-wrap svg:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+  .tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .event-num { fill: var(--surface); font-size: 10px; font-weight: 700; }
+  .tooltip { position: absolute; pointer-events: none; min-width: 200px; max-width: 260px; background: var(--surface);
+             border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.12);
+             padding: 10px 12px; font-size: 12.5px; opacity: 0; transition: opacity .08s; z-index: 2; }
+  .tooltip.show { opacity: 1; }
+  .tt-head { color: var(--ink-2); margin-bottom: 6px; }
+  .tt-row { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+  .tt-row b { font-variant-numeric: tabular-nums; min-width: 28px; }
+  .tt-row .name { color: var(--ink-2); flex: 1; }
+  .pf { font-size: 12px; font-weight: 600; }
+
+  /* Live */
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
   .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
   .tile .label { color: var(--ink-2); font-size: 13px; }
   .tile .value { font-size: 28px; font-weight: 600; line-height: 1.25; margin-top: 2px; }
   .tile .value small { font-size: 15px; color: var(--muted); font-weight: 500; }
   .tile .note { color: var(--muted); font-size: 12px; margin-top: 2px; }
-
-  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); margin: 0 0 8px; }
-  .legend span { display: inline-flex; align-items: center; gap: 6px; }
-  .key-line { width: 16px; height: 2px; border-radius: 1px; display: inline-block; }
-  .key-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 2px solid var(--muted); }
-  .key-band { width: 12px; height: 12px; border-radius: 2px; background: var(--wash); border: 1px solid var(--grid); display: inline-block; }
-
-  .chart-wrap { position: relative; }
-  .chart-wrap svg { display: block; width: 100%; height: auto; overflow: visible; }
-  .chart-wrap svg:focus { outline: none; }
-  .chart-wrap svg:focus-visible { outline: 2px solid var(--series-1); outline-offset: 4px; border-radius: 4px; }
-  .tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-  .event-num { fill: var(--surface); font-size: 10px; font-weight: 700; }
-
-  .tooltip { position: absolute; pointer-events: none; min-width: 200px; max-width: 260px; background: var(--surface);
-             border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.12);
-             padding: 10px 12px; font-size: 12.5px; opacity: 0; transition: opacity .08s; z-index: 2; }
-  .tooltip.show { opacity: 1; }
-  .tooltip .tt-head { color: var(--ink-2); margin-bottom: 6px; }
-  .tooltip .tt-row { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
-  .tooltip .tt-row b { font-variant-numeric: tabular-nums; min-width: 28px; }
-  .tooltip .tt-row .name { color: var(--ink-2); flex: 1; }
-
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .grid-2 > .card { margin-top: 16px; }
-  ol.changes { list-style: none; padding: 0; margin: 12px 0 0; }
-  ol.changes > li { padding: 12px 0; border-top: 1px solid var(--grid); }
-  ol.changes > li:first-child { border-top: 0; padding-top: 4px; }
-  .chg-head { display: flex; gap: 10px; align-items: baseline; }
-  .num { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--ink-2); color: var(--surface);
-         display: inline-grid; place-items: center; font-size: 11px; font-weight: 700; }
-  .chg-title { font-weight: 600; }
-  .chg-when { color: var(--muted); font-size: 12.5px; }
-  .deltas { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 6px 0 0 30px; font-size: 13px; font-variant-numeric: tabular-nums; }
-  .up   { color: var(--good-text); }
-  .down { color: var(--critical-text); }
-  .flat { color: var(--muted); }
-  .quote { margin: 6px 0 0 30px; color: var(--ink-2); font-size: 13px; border-left: 2px solid var(--grid); padding-left: 10px; }
-
-  .tests { list-style: none; padding: 0; margin: 12px 0 0; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  .tests { list-style: none; padding: 0; margin: 10px 0 0; }
   .tests li { padding: 10px 0; border-top: 1px solid var(--grid); }
-  .tests li:first-child { border-top: 0; padding-top: 4px; }
+  .tests li:first-child { border-top: 0; padding-top: 2px; }
   .tests .row { display: flex; align-items: center; gap: 8px; }
   .tests .score { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .tests p { margin: 4px 0 0 18px; color: var(--ink-2); font-size: 13px; }
-  .swatch { width: 10px; height: 10px; border-radius: 50%; flex: none; }
-  .pf { font-size: 12px; font-weight: 600; }
-
-  .empty { display: flex; gap: 10px; align-items: center; color: var(--ink-2); margin-top: 12px; }
-  .reg { padding: 10px 0; border-top: 1px solid var(--grid); }
-  .reg:first-of-type { border-top: 0; }
-
-  .table-scroll { overflow-x: auto; margin-top: 12px; }
+  .tests p { margin: 4px 0 0 18px; color: var(--ink-2); font-size: 13.5px; }
+  .table-scroll { overflow-x: auto; margin-top: 10px; }
   table { border-collapse: collapse; width: 100%; font-size: 13px; }
-  th, td { text-align: left; padding: 8px 10px; border-top: 1px solid var(--grid); white-space: nowrap; }
+  th, td { text-align: left; padding: 7px 10px; border-top: 1px solid var(--grid); white-space: nowrap; }
   th { color: var(--ink-2); font-weight: 600; border-top: 0; }
   td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
   tr.is-baseline td { background: var(--wash); }
   .tag { font-size: 11px; font-weight: 600; color: var(--ink-2); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; margin-left: 6px; }
+  details summary { cursor: pointer; font-weight: 600; }
+  details summary::marker { color: var(--muted); }
 
-  footer { color: var(--muted); font-size: 13px; margin-top: 32px; }
-  footer p { margin: 4px 0; }
+  /* Highlights */
+  .highlights { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .highlights p { color: var(--ink-2); margin: 0; font-size: 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .chip { font-size: 13px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); }
+
+  footer { color: var(--muted); font-size: 13px; margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--grid); }
   .error { color: var(--critical-text); }
 
-  @media (max-width: 760px) {
+  @media (max-width: 860px) {
+    .hero, .story, .grid-2 { grid-template-columns: 1fr; }
+    .pipeline, .highlights { grid-template-columns: 1fr 1fr; }
     .tiles { grid-template-columns: repeat(2, 1fr); }
-    .grid-2 { grid-template-columns: 1fr; gap: 0; }
-    h1 { font-size: 22px; }
+    h1 { font-size: 30px; }
+  }
+  @media (max-width: 560px) {
+    .pipeline, .highlights { grid-template-columns: 1fr; }
+    h1 { font-size: 26px; }
     .card { padding: 16px; }
   }
 </style>
 </head>
 <body>
 <main>
-  <div class="eyebrow">EvalForge · LLM regression testing</div>
-  <h1>Meridian compliance evals</h1>
-  <p class="lede">Every push runs a compliance test suite against the Meridian fintech assistant. An LLM judge scores
-    each answer from 1 to 5, and CI fails if any test drops 1.0 or more below the baseline run.</p>
-  <div class="meta" id="meta"><span>Loading…</span></div>
+  <header class="hero">
+    <div>
+      <div class="kicker">EvalForge</div>
+      <h1>Regression tests for LLM apps, scored by an AI judge and enforced in CI</h1>
+      <p class="lede">Prompts, models and providers change underneath every LLM product. EvalForge runs a suite of
+        test questions on every push, has a second model grade each answer, and blocks the change if quality drops.
+        This page is its live output.</p>
+      <div class="cta">
+        <a class="btn primary" href="#story">Watch it catch a regression ↓</a>
+        <a class="btn" href="https://github.com/subritii/Python-AI-Infra">View source on GitHub</a>
+      </div>
+    </div>
+    <aside class="card status-card" aria-label="Live CI status" id="status">
+      <div class="label">Loading live status…</div>
+    </aside>
+  </header>
 
-  <section class="tiles" id="tiles" aria-label="Latest run summary"></section>
-
-  <section class="card" aria-labelledby="chart-title">
-    <h2 id="chart-title">Judge score per test, by run</h2>
-    <p class="sub">Oldest to newest. Hollow points failed the judge (score below 3.0). Numbered markers are model,
-      prompt or temperature changes, listed below. Hover or use arrow keys for details.</p>
-    <div class="legend" id="legend"></div>
-    <div class="chart-wrap" id="chart"></div>
+  <section class="block" id="how" aria-labelledby="how-title">
+    <div class="kicker">How it works</div>
+    <h2 id="how-title">Six steps, every push</h2>
+    <p class="sub">The app under test is <b>Meridian</b>, a fictional fintech assistant. The tests check answers a
+      regulator would care about: risk disclosures, deposit insurance, and refusing personalized buy/sell advice.</p>
+    <div class="pipeline" id="pipeline"></div>
   </section>
 
-  <div class="grid-2">
-    <section class="card" aria-labelledby="changes-title">
-      <h2 id="changes-title">What changed, and what it did</h2>
-      <p class="sub">Score change on each test from the run before a change to the run after it.</p>
-      <ol class="changes" id="changes"></ol>
-    </section>
-    <div>
-      <section class="card" aria-labelledby="reg-title">
-        <h2 id="reg-title">Active regressions</h2>
-        <div id="regressions"></div>
-      </section>
-      <section class="card" aria-labelledby="latest-title">
-        <h2 id="latest-title">Latest run: judge verdicts</h2>
+  <section class="block" id="story" aria-labelledby="story-title">
+    <div class="kicker">Case study · real data</div>
+    <h2 id="story-title">Watch it catch a regression</h2>
+    <p class="sub">Every point below is a real run. Step through the history to see how the scores moved and what
+      the gate decided at each turn.</p>
+    <div class="chapters" role="tablist" aria-label="Chapters" id="chapters"></div>
+    <div class="story">
+      <div class="card">
+        <div class="legend" id="legend"></div>
+        <div class="chart-wrap" id="chart"></div>
+      </div>
+      <div class="card story-text" role="tabpanel" id="chapter-panel" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="block" id="live" aria-labelledby="live-title">
+    <div class="kicker">Live results</div>
+    <h2 id="live-title">Latest run</h2>
+    <p class="sub" id="live-sub"></p>
+    <div class="tiles" id="tiles"></div>
+    <div class="grid-2">
+      <section class="card" aria-labelledby="verdicts-title">
+        <h3 id="verdicts-title">What the judge said</h3>
         <ul class="tests" id="latest"></ul>
       </section>
+      <section class="card" aria-labelledby="tests-title">
+        <h3 id="tests-title">The test cases</h3>
+        <ul class="tests" id="testdefs"></ul>
+      </section>
     </div>
-  </div>
+    <details class="card" style="margin-top:16px">
+      <summary>Full run history (<span id="run-count"></span> runs)</summary>
+      <p class="sub" id="table-note" style="margin:10px 0 0;font-size:13px"></p>
+      <div class="table-scroll"><table id="history"></table></div>
+    </details>
+  </section>
 
-  <section class="card" aria-labelledby="table-title">
-    <h2 id="table-title">Run history</h2>
-    <p class="sub" id="table-note"></p>
-    <div class="table-scroll"><table id="history"></table></div>
+  <section class="block" aria-labelledby="eng-title">
+    <div class="kicker">Engineering</div>
+    <h2 id="eng-title">Design decisions</h2>
+    <p class="sub">An eval is only useful if you can trust it. These are the parts that make it trustworthy.</p>
+    <div class="highlights">
+      <div class="card"><h3>Judge output is validated</h3><p>Every verdict is parsed into a Pydantic model (score 1–5,
+        non-empty reasoning). Invalid output is retried up to 3 times, with the parse error fed back to the judge.</p></div>
+      <div class="card"><h3>Failures can't hide</h3><p>A test that errors (rate limit, outage, retired model) fails the
+        gate. A broken provider can never show up as "no regressions".</p></div>
+      <div class="card"><h3>Bounded async fan-out</h3><p>Test cases run concurrently with <code>asyncio.gather</code>,
+        capped by a semaphore so the suite stays inside provider rate limits.</p></div>
+      <div class="card"><h3>Runs fully offline</h3><p>Demo mode swaps in a deterministic mock for both model and judge,
+        so the whole pipeline runs with no API keys or database. CI runs it before the live suite.</p></div>
+      <div class="card"><h3>Fails fast on bad config</h3><p>Provider, API keys and database are validated at startup,
+        with a one-line error instead of a stack trace halfway through a run.</p></div>
+      <div class="card"><h3>Judge noise is measured</h3><p>The same answer can score 0.5–1.0 apart between runs. The chart
+        shows it, and the baseline is picked from a typical run, not a lucky one.</p></div>
+    </div>
+    <div class="chips" aria-label="Tech stack">
+      <span class="chip">Python 3.11</span><span class="chip">asyncio</span><span class="chip">Pydantic</span>
+      <span class="chip">PostgreSQL · asyncpg</span><span class="chip">Groq · gpt-oss-120b</span>
+      <span class="chip">Anthropic SDK</span><span class="chip">pytest</span><span class="chip">GitHub Actions</span>
+      <span class="chip">GitHub Pages</span>
+    </div>
   </section>
 
   <footer>
-    <p>Pipeline: YAML test cases → model call → LLM judge (validated JSON, retries) → Postgres → regression gate → this page.
-      Data refreshes on every push to <code>main</code>.</p>
-    <p><a href="https://github.com/subritii/Python-AI-Infra">Source on GitHub</a></p>
+    <p>Built by <a href="https://github.com/subritii">@subritii</a>. CI exports the data on this page after every push
+      to <code>main</code>. <a href="https://github.com/subritii/Python-AI-Infra">Source</a></p>
   </footer>
 </main>
 
@@ -218,8 +301,58 @@
 (() => {
   const TOPICS = { fin_003: "FDIC coverage", fin_006: "Risk disclosure", fin_008: "Advice boundary" };
   const SERIES_VARS = ["--series-1", "--series-2", "--series-3"];
-  const PASS = 3.0;
+  const PASS = 3.0, GATE_DROP = 1.0;
   const SVG_NS = "http://www.w3.org/2000/svg";
+
+  // Narrative for each (model, temperature) era. Every number shown is computed from the data;
+  // an era without an entry here gets generic text.
+  //   compareLast   judge the era by its final run instead of its first
+  //   setsBaseline  "first" | "last": that run becomes the baseline for later eras
+  //   focusFromPrev keep the previous era's focus test (follow a regression through its fix)
+  const STORY = {
+    "llama-3.3-70b-versatile|0.7": {
+      short: "Prototype",
+      title: "Prototype: the judge flags compliance failures",
+      body: (c) => [
+        `The first version ran Llama 3.3 70B at temperature 0.7, with a system prompt telling Meridian to avoid ` +
+        `"unnecessary hedging or disclaimers". Across ${c.runs.length} runs the average pass rate was ${c.avgPass}%.`,
+        `${c.worst.name} failed in ${c.worst.fails} of ${c.worst.total} runs. The judge caught the model doing exactly ` +
+        `what a regulator would object to.`
+      ],
+    },
+    "llama-3.3-70b-versatile|0.2": {
+      short: "Prompt hardening",
+      title: "Hardening the prompt",
+      compareLast: true,
+      setsBaseline: "last",
+      body: (c) => [
+        `The system prompt was rewritten so regulatory disclosures are never optional, and temperature dropped to 0.2.`,
+        `By the end of this phase, run ${c.last.run_id} passed ${Math.round(c.last.pass_rate * 100)}% of tests and ` +
+        `became the regression baseline.`
+      ],
+    },
+    "openai/gpt-oss-120b|0.2": {
+      short: "Model retired",
+      title: "The provider retired the model",
+      body: (c) => [
+        `Groq retired llama-3.3-70b-versatile. Same prompt, same tests, new model: gpt-oss-120b.`,
+        `The gate compares every test with the baseline and fails CI if any score drops by ${GATE_DROP.toFixed(1)} or more.` +
+        (c.compare && c.compare.failed ? ` This one did.` : ``)
+      ],
+    },
+    "openai/gpt-oss-120b|0": {
+      short: "Root cause & fix",
+      title: "Root cause and fix",
+      setsBaseline: "first",
+      focusFromPrev: true,
+      body: (c) => [
+        `Re-running the failing test gave 5.0, 3.5 and 5.0, so it wasn't a fluke. The system prompt never told Meridian ` +
+        `how its own cash sweep account works, so the model guessed.`,
+        `Adding the product facts to the prompt and setting temperature to 0 fixed it: ${c.focusName} went from ` +
+        `${c.fromScore} to ${c.toScore}, and has scored ${c.focusStat} since. Run ${c.first.run_id} is the new baseline.`
+      ],
+    },
+  };
 
   const $ = (id) => document.getElementById(id);
   const el = (tag, attrs = {}, text) => {
@@ -239,175 +372,365 @@
   const fmtScore = (s) => s == null ? "–" : s.toFixed(1);
   const shortModel = (m) => (m || "").replace(/^openai\//, "").replace(/-versatile$/, "");
   const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const topic = (t) => TOPICS[t] || t;
 
   fetch("dashboard_data.json", { cache: "no-store" })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(render)
     .catch(() => {
-      $("meta").replaceChildren(el("span", { class: "error" },
-        "Could not load dashboard_data.json. Serve this folder over HTTP (e.g. python -m http.server) instead of opening the file directly."));
+      $("status").replaceChildren(el("div", { class: "error" },
+        "Could not load dashboard_data.json. Serve this folder over HTTP (python -m http.server) instead of opening the file directly."));
     });
 
   function render(data) {
     const runs = data.runs.slice().reverse();               // oldest → newest
-    runs.forEach((r) => {
+    runs.forEach((r, i) => {
+      r.i = i;
       r.date = parseDate(r.created_at);
-      r.scores = {};
-      r.byTest = {};
+      r.scores = {}; r.byTest = {};
       for (const x of r.results || []) { r.scores[x.test_id] = x.score; r.byTest[x.test_id] = x; }
     });
-    const latest = runs[runs.length - 1];
-    const baselineId = data.baseline_run_id;
     const tests = [...new Set(runs.flatMap((r) => Object.keys(r.scores)))].sort();
-    const color = Object.fromEntries(tests.map((t, i) => [t, SERIES_VARS[i % SERIES_VARS.length]]));
-    const regressions = data.active_regressions || [];
-    const events = findEvents(runs);
+    const ctx = {
+      runs, tests,
+      color: Object.fromEntries(tests.map((t, i) => [t, SERIES_VARS[i % SERIES_VARS.length]])),
+      latest: runs[runs.length - 1],
+      baselineId: data.baseline_run_id,
+      regressions: data.active_regressions || [],
+      events: findEvents(runs),
+      defs: Object.fromEntries((data.tests || []).map((t) => [t.id, t])),
+    };
+    ctx.chapters = buildChapters(ctx);
 
-    renderMeta(latest, baselineId, regressions);
-    renderTiles(latest, regressions, runs);
-    renderLegend(tests, color, baselineId);
-    renderChart(runs, tests, color, events, baselineId);
-    renderChanges(runs, tests, color, events);
-    renderRegressions(regressions, baselineId);
-    renderLatest(latest, tests, color);
-    renderTable(runs, tests, baselineId);
+    renderStatus(ctx);
+    renderPipeline(ctx);
+    renderLegend(ctx);
+    setupStory(ctx);
+    renderLive(ctx);
   }
 
-  // A change point is any run whose model, temperature or prompt differs from the run before it.
+  // ---------- data shaping ----------
+
   function findEvents(runs) {
     const events = [];
     for (let i = 1; i < runs.length; i++) {
-      const a = runs[i - 1], b = runs[i], parts = [];
-      if (a.model_version !== b.model_version) parts.push("Model: " + shortModel(a.model_version) + " → " + shortModel(b.model_version));
-      if (a.prompt_hash !== b.prompt_hash) parts.push("System prompt revised");
-      if (a.temperature !== b.temperature) parts.push("Temperature " + a.temperature + " → " + b.temperature);
-      if (parts.length) events.push({ index: i, n: events.length + 1, parts });
+      const a = runs[i - 1], b = runs[i];
+      if (a.model_version !== b.model_version || a.temperature !== b.temperature || a.prompt_hash !== b.prompt_hash) {
+        events.push({ index: i, n: events.length + 1 });
+      }
     }
     return events;
   }
 
-  function renderMeta(latest, baselineId, regressions) {
+  function gate(before, after, tests) {
+    const rows = [];
+    for (const t of tests) {
+      const a = before.scores[t], b = after.scores[t];
+      if (a == null || b == null) continue;
+      rows.push({ t, a, b, d: b - a, regressed: a - b >= GATE_DROP });
+    }
+    return { rows, failed: rows.some((r) => r.regressed) };
+  }
+
+  // One chapter per contiguous (model, temperature) era, then a final "today" view of everything.
+  function buildChapters(ctx) {
+    const { runs, tests } = ctx;
+    const segs = [];
+    for (const r of runs) {
+      const key = r.model_version + "|" + r.temperature;
+      const last = segs[segs.length - 1];
+      if (last && last.key === key) last.runs.push(r); else segs.push({ key, runs: [r] });
+    }
+    let baseline = null, prevChapter = null;
+    const chapters = segs.map((s, k) => {
+      const prev = k > 0 ? segs[k - 1] : null;
+      const first = s.runs[0], last = s.runs[s.runs.length - 1];
+      const story = STORY[s.key];
+      const c = { key: s.key, runs: s.runs, first, last, range: [first.i, last.i] };
+
+      c.avgPass = Math.round(100 * s.runs.reduce((a, r) => a + r.pass_rate, 0) / s.runs.length);
+      c.worst = tests.map((t) => {
+        const scored = s.runs.filter((r) => r.scores[t] != null);
+        const failed = scored.filter((r) => r.scores[t] < PASS);
+        // Quote the most severe failure (latest one on ties).
+        const lastFail = failed.reduce((w, r) => (!w || r.scores[t] <= w.scores[t] ? r : w), null);
+        return { t, name: topic(t), fails: failed.length, total: scored.length, lastFail };
+      }).sort((a, b) => b.fails - a.fails)[0];
+
+      // What the gate saw: this era's opening (or final) run against the baseline in effect
+      // (or, before any baseline exists, the previous era's final run).
+      let keyRun;
+      if (prev) {
+        const before = baseline || prev.runs[prev.runs.length - 1];
+        keyRun = story && story.compareLast ? last : first;
+        c.compare = { before, after: keyRun, ...gate(before, keyRun, tests) };
+        const mover = c.compare.rows.slice().sort((a, b) => Math.abs(b.d) - Math.abs(a.d))[0];
+        c.focus = story && story.focusFromPrev && prevChapter.focus ? prevChapter.focus
+                : mover && Math.abs(mover.d) >= 0.5 ? mover.t : null;
+      } else {
+        keyRun = c.worst.lastFail || last;
+        c.focus = c.worst.fails ? c.worst.t : null;
+      }
+      c.key_i = keyRun.i;
+      if (c.focus) {
+        const scored = s.runs.map((r) => r.scores[c.focus]).filter((v) => v != null);
+        c.focusName = topic(c.focus);
+        c.focusStat = scored.every((v) => v === scored[0])
+          ? `${fmtScore(scored[0])} in ${scored.length} of ${scored.length} runs`
+          : `between ${fmtScore(Math.min(...scored))} and ${fmtScore(Math.max(...scored))}`;
+        const x = keyRun.byTest[c.focus];
+        if (x && x.reasoning) c.quote = { text: x.reasoning, test: c.focus, run: keyRun };
+        const from = prevChapter && runs[prevChapter.key_i].scores[c.focus];
+        c.fromScore = fmtScore(from);
+        c.toScore = fmtScore(keyRun.scores[c.focus]);
+      }
+
+      c.short = story ? story.short : `${shortModel(first.model_version)} · temp ${first.temperature}`;
+      c.title = story ? story.title : `${shortModel(first.model_version)} at temperature ${first.temperature}`;
+      c.body = story ? story.body(c)
+        : [`${s.runs.length} runs on ${shortModel(first.model_version)} at temperature ${first.temperature}, ` +
+           `with an average pass rate of ${c.avgPass}%.`];
+      c.dates = fmtDay(first.date) + (fmtDay(first.date) === fmtDay(last.date) ? "" : " – " + fmtDay(last.date));
+      if (story && story.setsBaseline) baseline = story.setsBaseline === "last" ? last : first;
+      prevChapter = c;
+      return c;
+    });
+
+    const latest = ctx.latest;
+    const base = runs.find((r) => r.run_id === ctx.baselineId);
+    chapters.push({
+      today: true, short: "Today", dates: fmtDay(latest.date), range: null, key_i: latest.i,
+      title: "Where it stands today",
+      body: [`${runs.length} runs tracked. The latest run, ${latest.run_id}, passed ${Math.round(latest.pass_rate * 100)}% of ` +
+             `tests with an average judge score of ${latest.avg_score.toFixed(2)} / 5.`,
+             `Every push to main re-runs the suite against the baseline and refreshes this page.`],
+      compare: base && base !== latest ? { before: base, after: latest, ...gate(base, latest, tests) } : null,
+    });
+    return chapters;
+  }
+
+  // ---------- hero status ----------
+
+  function renderStatus(ctx) {
+    const { latest, regressions, baselineId } = ctx;
     const ok = regressions.length === 0;
-    const badge = el("span", { class: "badge " + (ok ? "good" : "bad") });
-    badge.append(el("span", { class: "dot", "aria-hidden": "true" }, ok ? "✓" : "✕"),
-                 document.createTextNode(ok ? "Passing" : regressions.length + " regression" + (regressions.length > 1 ? "s" : "")));
-    const span = (label, val) => { const s = el("span", {}, label + " "); s.append(el("code", {}, val)); return s; };
-    $("meta").replaceChildren(badge, span("Latest", latest.run_id), span("Model", shortModel(latest.model_version)),
-      span("Baseline", baselineId || "none"), el("span", {}, "Updated " + fmtFull(latest.date)));
+    const big = el("div", { class: "big" });
+    big.append(el("span", { class: "icon " + (ok ? "good" : "bad"), "aria-hidden": "true" }, ok ? "✓" : "✕"),
+      document.createTextNode(ok ? "CI gate passing" : regressions.length + " active regression" + (regressions.length > 1 ? "s" : "")));
+    const row = (k, v, mono) => { const r = el("div", { class: "row" }); r.append(el("span", {}, k), el("span", mono ? { class: "mono" } : {}, v)); return r; };
+    $("status").replaceChildren(
+      el("div", { class: "label" }, "Live status"), big,
+      row("Latest run", latest.run_id, true),
+      row("Model", shortModel(latest.model_version)),
+      row("Pass rate", Math.round(latest.pass_rate * 100) + "%"),
+      row("Avg judge score", latest.avg_score.toFixed(2) + " / 5"),
+      row("Baseline", baselineId || "none", true),
+      row("Updated", fmtFull(latest.date)));
   }
 
-  function renderTiles(latest, regressions, runs) {
-    const tile = (label, value, unit, note) => {
-      const t = el("div", { class: "tile" });
-      const v = el("div", { class: "value" }, value);
-      if (unit) v.append(el("small", {}, " " + unit));
-      t.append(el("div", { class: "label" }, label), v);
-      if (note) t.append(el("div", { class: "note" }, note));
-      return t;
-    };
-    const n = Object.keys(latest.scores).length;
-    $("tiles").replaceChildren(
-      tile("Pass rate", Math.round(latest.pass_rate * 100) + "%", "", n + " tests, latest run"),
-      tile("Avg judge score", latest.avg_score.toFixed(2), "/ 5", "latest run"),
-      tile("Active regressions", String(regressions.length), "", "drop ≥ 1.0 vs baseline"),
-      tile("Runs tracked", String(runs.length), "", "since " + fmtDay(runs[0].date))
-    );
+  // ---------- pipeline ----------
+
+  function renderPipeline(ctx) {
+    const { latest, defs, runs, baselineId } = ctx;
+    const t = latest.byTest.fin_003 ? "fin_003" : Object.keys(latest.byTest)[0];
+    const def = defs[t], verdict = latest.byTest[t];
+    const answers = runs.reduce((a, r) => a + (r.results || []).length, 0);
+
+    const yaml = def
+      ? `- id: ${def.id}\n  topic: ${def.topic}\n  prompt: "${def.prompt}"\n  expected_output: >\n    ${def.expected_output}\n  metric: llm_judge`
+      : `- id: ${t}\n  prompt: "…"\n  expected_output: "…"\n  metric: llm_judge`;
+    const judge = verdict
+      ? JSON.stringify({ score: verdict.score, passed: verdict.passed, reasoning: verdict.reasoning }, null, 2)
+      : "{ … }";
+
+    const steps = [
+      ["Write test cases", "Each case is a question plus the answer a compliance reviewer expects, in YAML.", yaml],
+      ["Ask the model", "The app's system prompt and the question go to the model under test. Groq and Anthropic are supported, plus an offline mock.",
+        `provider:    groq\nmodel:       ${latest.model_version}\ntemperature: ${latest.temperature}\nconcurrency: semaphore-bounded`],
+      ["Judge the answer", "A second LLM grades the answer against the expected one on a 1–5 rubric and returns JSON.", judge],
+      ["Store the run", "Every run and every per-test score goes to Postgres, so any two runs can be compared.",
+        `${runs.length} runs\n${answers} judged answers`],
+      ["Gate the change", `If any test drops ${GATE_DROP.toFixed(1)} or more below the baseline run, CI fails and the change is blocked.`,
+        `baseline: ${baselineId || "none"}\nfail if:  baseline − score ≥ ${GATE_DROP.toFixed(1)}`],
+      ["Publish", "CI exports the results and deploys this page on every push to main.", "GitHub Actions → GitHub Pages"],
+    ];
+    $("pipeline").replaceChildren(...steps.map(([title, text, code], i) => {
+      const c = el("div", { class: "card step" });
+      const a = el("div", { class: "artifact" }); a.append(el("pre", {}, code));
+      c.append(el("span", { class: "n" }, String(i + 1)), el("h3", {}, title), el("p", {}, text), a);
+      return c;
+    }));
   }
 
-  function renderLegend(tests, color, baselineId) {
-    const items = tests.map((t) => {
+  // ---------- story ----------
+
+  function renderLegend(ctx) {
+    const items = ctx.tests.map((t) => {
       const s = el("span");
-      const k = el("span", { class: "key-line" }); k.style.background = `var(${color[t]})`;
-      s.append(k, document.createTextNode((TOPICS[t] || t) + " (" + t + ")"));
+      const k = el("span", { class: "key-line" }); k.style.background = `var(${ctx.color[t]})`;
+      s.append(k, document.createTextNode(topic(t)));
       return s;
     });
     const hollow = el("span"); hollow.append(el("span", { class: "key-dot" }), document.createTextNode("Failed (< 3.0)"));
-    items.push(hollow);
-    if (baselineId) { const b = el("span"); b.append(el("span", { class: "key-band" }), document.createTextNode("Baseline run")); items.push(b); }
-    $("legend").replaceChildren(...items);
+    $("legend").replaceChildren(...items, hollow);
   }
 
-  function renderChart(runs, tests, color, events, baselineId) {
-    const wrap = $("chart");
-    const draw = () => {
-      const W = Math.max(320, wrap.clientWidth), H = W < 520 ? 240 : 300;
-      const m = { l: 28, r: 40, t: 30, b: 28 };
+  function setupStory(ctx) {
+    const { chapters } = ctx;
+    const tabs = chapters.map((c, k) => {
+      const b = el("button", { class: "chap", role: "tab", id: "chap-" + k, "aria-controls": "chapter-panel" });
+      b.append(el("b", {}, (c.today ? "" : (k + 1) + ". ") + c.short), document.createTextNode(c.dates));
+      b.addEventListener("click", () => go(k));
+      b.addEventListener("keydown", (ev) => {
+        if (ev.key === "ArrowRight") { go(k + 1, true); ev.preventDefault(); }
+        if (ev.key === "ArrowLeft")  { go(k - 1, true); ev.preventDefault(); }
+      });
+      return b;
+    });
+    $("chapters").replaceChildren(...tabs);
+
+    const chart = makeChart($("chart"), ctx);
+    function go(k, focusTab) {
+      const cur = Math.max(0, Math.min(chapters.length - 1, k));
+      tabs.forEach((t, i) => { t.setAttribute("aria-selected", String(i === cur)); t.tabIndex = i === cur ? 0 : -1; });
+      if (focusTab) tabs[cur].focus();
+      const c = chapters[cur];
+      chart.draw({ focus: c.range, key: c.key_i, compare: c.compare ? c.compare.before.i : null });
+      renderChapter(ctx, c, cur, go);
+    }
+    go(0);
+  }
+
+  function renderChapter(ctx, c, k, go) {
+    const nodes = [el("div", { class: "kicker" }, c.today ? "Now" : `Chapter ${k + 1} of ${ctx.chapters.length - 1}`),
+                   el("h3", {}, c.title)];
+    for (const p of c.body) nodes.push(el("p", {}, p));
+
+    if (c.compare) {
+      const v = el("div", { class: "verdict" }), head = el("div", { class: "head" });
+      head.append(el("span", { class: "icon sm " + (c.compare.failed ? "bad" : "good"), "aria-hidden": "true" }, c.compare.failed ? "✕" : "✓"),
+        document.createTextNode(c.compare.failed ? "Gate: fail, CI blocked" : "Gate: pass"),
+        el("small", {}, `${c.compare.after.run_id} vs baseline ${c.compare.before.run_id}`));
+      const ul = el("ul");
+      for (const r of c.compare.rows) {
+        const li = el("li");
+        const sw = el("span", { class: "swatch" }); sw.style.background = `var(${ctx.color[r.t]})`;
+        const cls = r.regressed ? "down" : r.d > 0 ? "up" : "flat";
+        li.append(sw, el("span", { class: "t" }, topic(r.t)), el("span", {}, fmtScore(r.a) + " → " + fmtScore(r.b)),
+          el("span", { class: cls, style: "min-width:68px;text-align:right" },
+            r.d === 0 ? "same" : (r.d > 0 ? "▲ " : "▼ ") + Math.abs(r.d).toFixed(1) + (r.regressed ? " ✕" : "")));
+        ul.append(li);
+      }
+      v.append(head, ul);
+      nodes.push(v);
+    } else if (!c.today) {
+      const v = el("div", { class: "verdict" }), head = el("div", { class: "head" });
+      head.append(document.createTextNode(`Average pass rate ${c.avgPass}%`), el("small", {}, `across ${c.runs.length} runs`));
+      v.append(head);
+      nodes.push(v);
+    }
+    if (c.quote) {
+      const q = el("blockquote", { class: "quote" }, "“" + c.quote.text + "”");
+      q.append(el("cite", {}, `Judge on ${topic(c.quote.test)}, run ${c.quote.run.run_id}`));
+      nodes.push(q);
+    }
+    const nav = el("div", { class: "nav" });
+    const prev = el("button", { class: "btn" }, "← Previous"), next = el("button", { class: "btn primary" }, "Next →");
+    if (k === 0) prev.style.visibility = "hidden";
+    if (k === ctx.chapters.length - 1) next.style.visibility = "hidden";
+    prev.addEventListener("click", () => go(k - 1));
+    next.addEventListener("click", () => go(k + 1));
+    nav.append(prev, next);
+    nodes.push(nav);
+    $("chapter-panel").replaceChildren(...nodes);
+  }
+
+  function makeChart(wrap, ctx) {
+    const { runs, tests, color, events } = ctx;
+    let opts = {};
+    const draw = (o) => {
+      if (o) opts = o;
+      const W = Math.max(300, wrap.clientWidth), H = W < 480 ? 230 : 290;
+      const m = { l: 26, r: 34, t: 28, b: 26 };
       const pw = W - m.l - m.r, ph = H - m.t - m.b;
       const step = runs.length > 1 ? pw / (runs.length - 1) : 0;
       const x = (i) => m.l + i * step;
       const y = (s) => m.t + ((5 - s) / 4) * ph;
+      const inFocus = (i) => !opts.focus || (i >= opts.focus[0] && i <= opts.focus[1]);
+      const DIM = 0.16;
 
       const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", tabindex: "0",
-        "aria-label": "Line chart of judge scores per test across " + runs.length + " runs. Full data in the run history table." });
+        "aria-label": `Judge scores per test across ${runs.length} runs. Full data in the run history table.` });
 
-      const bi = runs.findIndex((r) => r.run_id === baselineId);
-      if (bi >= 0) root.append(svg("rect", { x: x(bi) - Math.max(step / 2, 6), y: m.t, width: Math.max(step, 12), height: ph, fill: cssVar("--wash") }));
-
+      if (opts.focus) {
+        const [a, b] = opts.focus, pad = Math.max(step / 2, 5);
+        root.append(svg("rect", { x: x(a) - pad, y: m.t, width: x(b) - x(a) + 2 * pad, height: ph, fill: cssVar("--wash"), rx: 4 }));
+      }
       for (let s = 1; s <= 5; s++) {
         root.append(svg("line", { x1: m.l, x2: m.l + pw, y1: y(s), y2: y(s), stroke: cssVar(s === PASS ? "--axis" : "--grid"), "stroke-width": 1 }));
         const t = svg("text", { x: m.l - 8, y: y(s) + 4, "text-anchor": "end", class: "tick" }); t.textContent = s; root.append(t);
       }
       const pl = svg("text", { x: m.l + pw + 6, y: y(PASS) + 4, class: "tick" }); pl.textContent = "pass"; root.append(pl);
 
-      // Event markers: a hairline between the two runs, plus a numbered badge on top.
-      // Badges that would overlap are pushed right; the hairline stays put.
+      // Change points: hairline between runs plus a numbered badge; overlapping badges are pushed right.
       let lastBadge = -Infinity;
       for (const e of events) {
-        const ex = x(e.index) - step / 2;
-        const bx = Math.max(ex, lastBadge + 18);
+        const ex = x(e.index) - step / 2, bx = Math.max(ex, lastBadge + 18);
         lastBadge = bx;
-        root.append(svg("line", { x1: ex, x2: ex, y1: m.t - 6, y2: m.t + ph, stroke: cssVar("--muted"), "stroke-width": 1, opacity: 0.6 }));
+        root.append(svg("line", { x1: ex, x2: ex, y1: m.t - 6, y2: m.t + ph, stroke: cssVar("--muted"), "stroke-width": 1, opacity: 0.5 }));
         root.append(svg("circle", { cx: bx, cy: m.t - 14, r: 8, fill: cssVar("--ink-2") }));
-        const nt = svg("text", { x: bx, y: m.t - 10.5, "text-anchor": "middle", class: "event-num" });
-        nt.textContent = e.n; root.append(nt);
+        const nt = svg("text", { x: bx, y: m.t - 10.5, "text-anchor": "middle", class: "event-num" }); nt.textContent = e.n; root.append(nt);
+      }
+
+      // The chapter's key run (2px) and the run it was compared against (1px).
+      for (const [i, w] of [[opts.compare, 1], [opts.key, 2]]) {
+        if (i == null) continue;
+        root.append(svg("line", { x1: x(i), x2: x(i), y1: m.t, y2: m.t + ph, stroke: cssVar("--ink-2"), "stroke-width": w, opacity: w === 2 ? 0.55 : 0.35 }));
       }
 
       // X ticks: first, last and change points; drop any that would collide (the last one always wins).
       const idx = [...new Set([0, ...events.map((e) => e.index), runs.length - 1])].sort((a, b) => a - b);
       const keep = [];
       for (const i of idx) {
-        while (keep.length && x(i) - x(keep[keep.length - 1]) < 52) {
-          if (i === runs.length - 1) keep.pop(); else break;
-        }
+        while (keep.length && i === runs.length - 1 && x(i) - x(keep[keep.length - 1]) < 52) keep.pop();
         if (!keep.length || x(i) - x(keep[keep.length - 1]) >= 52) keep.push(i);
       }
       for (const i of keep) {
-        const t = svg("text", { x: x(i), y: m.t + ph + 18, class: "tick",
-          "text-anchor": i === 0 ? "start" : i === runs.length - 1 ? "end" : "middle" });
+        const t = svg("text", { x: x(i), y: m.t + ph + 18, class: "tick", "text-anchor": i === 0 ? "start" : i === runs.length - 1 ? "end" : "middle" });
         t.textContent = fmtDay(runs[i].date); root.append(t);
       }
 
-      // Lines (broken where a run has no score for the test), then markers on top.
-      for (const t of tests) {
-        let d = "", pen = false;
-        runs.forEach((r, i) => {
-          const s = r.scores[t];
-          if (s == null) { pen = false; return; }
-          d += (pen ? "L" : "M") + x(i).toFixed(1) + " " + y(s).toFixed(1);
-          pen = true;
-        });
-        root.append(svg("path", { d, fill: "none", stroke: cssVar(color[t]), "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
-      }
       const surface = cssVar("--surface");
+      for (const t of tests) {
+        // The whole line dimmed, then the chapter's stretch at full strength on top.
+        for (const pass of opts.focus ? ["dim", "focus"] : ["focus"]) {
+          let d = "", pen = false;
+          runs.forEach((r, i) => {
+            const s = r.scores[t];
+            if (s == null || (pass === "focus" && !inFocus(i))) { pen = false; return; }
+            d += (pen ? "L" : "M") + x(i).toFixed(1) + " " + y(s).toFixed(1); pen = true;
+          });
+          root.append(svg("path", { d, fill: "none", stroke: cssVar(color[t]), "stroke-width": 2, "stroke-linejoin": "round",
+            "stroke-linecap": "round", opacity: pass === "dim" ? DIM : 1 }));
+        }
+      }
       for (const t of tests) {
         runs.forEach((r, i) => {
           const s = r.scores[t];
           if (s == null) return;
-          const failed = s < PASS;
-          root.append(svg("circle", { cx: x(i), cy: y(s), r: 6, fill: surface }));                 // surface ring
-          root.append(svg("circle", { cx: x(i), cy: y(s), r: failed ? 3.5 : 4,
+          const failed = s < PASS, op = inFocus(i) ? 1 : DIM;
+          root.append(svg("circle", { cx: x(i), cy: y(s), r: 6, fill: surface, opacity: op }));
+          root.append(svg("circle", { cx: x(i), cy: y(s), r: failed ? 3.5 : 4, opacity: op,
             fill: failed ? surface : cssVar(color[t]), stroke: cssVar(color[t]), "stroke-width": failed ? 2 : 0 }));
         });
       }
 
       // Hover / keyboard layer: crosshair snaps to the nearest run.
       const cross = svg("line", { y1: m.t, y2: m.t + ph, stroke: cssVar("--muted"), "stroke-width": 1, visibility: "hidden" });
-      root.append(cross);
       const hit = svg("rect", { x: m.l - step / 2, y: 0, width: pw + step, height: H, fill: "transparent" });
-      root.append(hit);
-
+      root.append(cross, hit);
       const tip = el("div", { class: "tooltip", role: "status" });
-      let cur = runs.length - 1;
+      let cur = opts.key != null ? opts.key : runs.length - 1;
       const show = (i) => {
         cur = Math.max(0, Math.min(runs.length - 1, i));
         const r = runs[cur], cx = x(cur);
@@ -415,27 +738,25 @@
         const head = el("div", { class: "tt-head" });
         head.append(el("b", {}, r.run_id), document.createTextNode(" · " + fmtFull(r.date)));
         const sub = el("div", { class: "tt-head" }, shortModel(r.model_version) + " · temp " + r.temperature +
-          (r.run_id === baselineId ? " · baseline" : ""));
+          (r.run_id === ctx.baselineId ? " · baseline" : ""));
         const rows = tests.map((t) => {
           const row = el("div", { class: "tt-row" });
           const k = el("span", { class: "key-line" }); k.style.background = `var(${color[t]})`;
           const s = r.scores[t];
-          row.append(k, el("b", {}, fmtScore(s)), el("span", { class: "name" }, TOPICS[t] || t),
+          row.append(k, el("b", {}, fmtScore(s)), el("span", { class: "name" }, topic(t)),
             el("span", { class: "pf " + (s == null ? "flat" : s < PASS ? "down" : "up") }, s == null ? "no result" : s < PASS ? "✕ fail" : "✓ pass"));
           return row;
         });
         tip.replaceChildren(head, sub, ...rows);
         tip.classList.add("show");
-        const scale = wrap.clientWidth / W;
-        const left = cx * scale, tw = tip.offsetWidth;
-        tip.style.left = (left + 14 + tw > wrap.clientWidth ? left - 14 - tw : left + 14) + "px";
+        const left = cx * (wrap.clientWidth / W), tw = tip.offsetWidth;
+        tip.style.left = (left + 14 + tw > wrap.clientWidth ? Math.max(0, left - 14 - tw) : left + 14) + "px";
         tip.style.top = "8px";
       };
       const hide = () => { tip.classList.remove("show"); cross.setAttribute("visibility", "hidden"); };
       hit.addEventListener("pointermove", (ev) => {
         const pt = root.getBoundingClientRect();
-        const px = (ev.clientX - pt.left) * (W / pt.width);
-        show(Math.round((px - m.l) / (step || 1)));
+        show(Math.round(((ev.clientX - pt.left) * (W / pt.width) - m.l) / (step || 1)));
       });
       hit.addEventListener("pointerleave", hide);
       root.addEventListener("focus", () => show(cur));
@@ -445,84 +766,59 @@
         if (ev.key === "ArrowRight") { show(cur + 1); ev.preventDefault(); }
         if (ev.key === "Escape") hide();
       });
-
       wrap.replaceChildren(root, tip);
     };
-    draw();
-    let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(draw, 120); });
-    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+    let rt;
+    window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => draw(), 120); });
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => draw());
+    return { draw };
   }
 
-  function renderChanges(runs, tests, color, events) {
-    const list = $("changes");
-    if (!events.length) { list.replaceChildren(el("li", { class: "chg-when" }, "No model, prompt or temperature changes in this window.")); return; }
-    list.replaceChildren(...events.slice().reverse().map((e) => {
-      const before = runs[e.index - 1], after = runs[e.index];
-      const li = el("li");
-      const head = el("div", { class: "chg-head" });
-      const txt = el("div");
-      txt.append(el("div", { class: "chg-title" }, e.parts.join(" · ")),
-                 el("div", { class: "chg-when" }, fmtFull(after.date) + " · " + before.run_id + " → " + after.run_id));
-      head.append(el("span", { class: "num", "aria-label": "Change " + e.n }, String(e.n)), txt);
-      li.append(head);
+  // ---------- live ----------
 
-      const deltas = el("div", { class: "deltas" });
-      let biggest = null;
-      for (const t of tests) {
-        const a = before.scores[t], b = after.scores[t];
-        if (a == null || b == null) continue;
-        const d = b - a;
-        const cls = d > 0 ? "up" : d < 0 ? "down" : "flat";
-        const s = el("span");
-        const sw = el("span", { class: "swatch" }); sw.style.cssText = `background:var(${color[t]});display:inline-block;margin-right:6px`;
-        s.append(sw, document.createTextNode((TOPICS[t] || t) + " " + fmtScore(a) + " → " + fmtScore(b) + " "),
-          el("span", { class: cls }, d === 0 ? "no change" : (d > 0 ? "▲ " : "▼ ") + Math.abs(d).toFixed(1)));
-        deltas.append(s);
-        if (Math.abs(d) >= 1 && (!biggest || Math.abs(d) > Math.abs(biggest.d))) biggest = { t, d, x: after.byTest[t] };
-      }
-      li.append(deltas);
-      if (biggest && biggest.x && biggest.x.reasoning) {
-        li.append(el("div", { class: "quote" }, "Judge on " + (TOPICS[biggest.t] || biggest.t) + ": “" + biggest.x.reasoning + "”"));
-      }
-      return li;
-    }));
-  }
+  function renderLive(ctx) {
+    const { latest, regressions, runs, tests, color, defs, baselineId } = ctx;
+    $("live-sub").textContent = `Run ${latest.run_id} on ${shortModel(latest.model_version)}, ${fmtFull(latest.date)}.`;
+    const tile = (label, value, unit, note) => {
+      const t = el("div", { class: "tile" });
+      const v = el("div", { class: "value" }, value);
+      if (unit) v.append(el("small", {}, " " + unit));
+      t.append(el("div", { class: "label" }, label), v, el("div", { class: "note" }, note));
+      return t;
+    };
+    $("tiles").replaceChildren(
+      tile("Pass rate", Math.round(latest.pass_rate * 100) + "%", "", Object.keys(latest.scores).length + " tests"),
+      tile("Avg judge score", latest.avg_score.toFixed(2), "/ 5", "1 = wrong, 5 = perfect"),
+      tile("Active regressions", String(regressions.length), "", "drop ≥ 1.0 vs baseline"),
+      tile("Runs tracked", String(runs.length), "", "since " + fmtDay(runs[0].date)));
 
-  function renderRegressions(regs, baselineId) {
-    const box = $("regressions");
-    if (!regs.length) {
-      const e = el("div", { class: "empty" });
-      const dot = el("span", { class: "badge good" }); dot.append(el("span", { class: "dot", "aria-hidden": "true" }, "✓"), document.createTextNode("None"));
-      e.append(dot, el("span", {}, "No test is 1.0 or more below baseline " + (baselineId || "") + "."));
-      box.replaceChildren(e); return;
-    }
-    box.replaceChildren(...regs.map((r) => {
-      const d = el("div", { class: "reg" });
-      const h = el("div", { class: "row" });
-      h.append(el("b", {}, (TOPICS[r.test_id] || r.test_id) + " "),
-               el("span", { class: "down" }, "✕ " + fmtScore(r.baseline_score) + " → " + fmtScore(r.current_score) + " (▼ " + r.drop.toFixed(1) + ")"));
-      d.append(h, el("div", { class: "quote", style: "margin-left:0" }, "“" + r.reasoning + "”"));
-      return d;
-    }));
-  }
-
-  function renderLatest(latest, tests, color) {
     $("latest").replaceChildren(...tests.filter((t) => latest.byTest[t]).map((t) => {
       const x = latest.byTest[t], failed = x.score < PASS;
       const li = el("li"), row = el("div", { class: "row" });
       const sw = el("span", { class: "swatch" }); sw.style.background = `var(${color[t]})`;
-      row.append(sw, el("b", {}, TOPICS[t] || t), el("span", { class: "mono", style: "color:var(--muted)" }, t),
-        el("span", { class: "score" }, fmtScore(x.score)), el("span", { class: "pf " + (failed ? "down" : "up") }, failed ? "✕ fail" : "✓ pass"));
+      row.append(sw, el("b", {}, topic(t)), el("span", { class: "score" }, fmtScore(x.score)),
+        el("span", { class: "pf " + (failed ? "down" : "up") }, failed ? "✕ fail" : "✓ pass"));
       li.append(row, el("p", {}, x.reasoning));
       return li;
     }));
-  }
 
-  function renderTable(runs, tests, baselineId) {
-    const tbl = $("history");
+    const ids = Object.keys(defs).length ? Object.keys(defs).sort() : tests;
+    $("testdefs").replaceChildren(...ids.map((t) => {
+      const d = defs[t], li = el("li"), row = el("div", { class: "row" });
+      const sw = el("span", { class: "swatch" }); sw.style.background = `var(${color[t] || "--muted"})`;
+      row.append(sw, el("b", {}, topic(t)), el("span", { class: "mono", style: "margin-left:auto;color:var(--muted)" }, t));
+      li.append(row);
+      if (d) {
+        li.append(el("p", {}, "Q: “" + d.prompt + "”"));
+        li.append(el("p", { style: "color:var(--muted)" }, "Expected: " + d.expected_output));
+      }
+      return li;
+    }));
+
+    $("run-count").textContent = runs.length;
     const thead = el("thead"), hr = el("tr");
     ["Run", "Date (UTC)", "Model", "Temp", "Prompt"].forEach((h) => hr.append(el("th", {}, h)));
-    ["Pass rate", "Avg", ...tests.map((t) => TOPICS[t] || t)].forEach((h) => hr.append(el("th", { class: "n" }, h)));
+    ["Pass rate", "Avg", ...tests.map(topic)].forEach((h) => hr.append(el("th", { class: "n" }, h)));
     thead.append(hr);
     const tbody = el("tbody");
     for (const r of runs.slice().reverse()) {
@@ -539,9 +835,9 @@
       }
       tbody.append(tr);
     }
-    tbl.replaceChildren(thead, tbody);
-    $("table-note").textContent = "Newest first. ✕ marks a failing judge score. “–” means the test errored or wasn't in that run. " +
-      "Prompt hashes are real from Sep 30, 2026; earlier runs share one placeholder hash.";
+    $("history").replaceChildren(thead, tbody);
+    $("table-note").textContent = "Newest first. ✕ marks a failing judge score; “–” means the test errored or wasn't in that run. " +
+      "Prompt hashes are tracked from Sep 30, 2026; earlier runs share one placeholder hash.";
   }
 })();
 </script>
