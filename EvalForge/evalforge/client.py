@@ -1,4 +1,3 @@
-import os
 import json
 import asyncio
 from dataclasses import dataclass
@@ -24,9 +23,16 @@ class EvalForgeClient:
         self.provider  = config.provider
         self._client   = None
 
-        if not self.mock_mode and self.provider == "anthropic":
+        # Missing keys are reported by config.validate_live() before any call.
+        if not self.mock_mode and self.provider == "anthropic" and config.anthropic_api_key:
             import anthropic
-            self._client = anthropic.AsyncAnthropic()
+            self._client = anthropic.AsyncAnthropic(api_key=config.anthropic_api_key)
+        elif not self.mock_mode and self.provider == "groq" and config.groq_api_key:
+            from openai import AsyncOpenAI
+            self._client = AsyncOpenAI(
+                api_key=config.groq_api_key,
+                base_url="https://api.groq.com/openai/v1"
+            )
 
     def _mock_call(self, prompt: str, system: str = "") -> APIResponse:
         if "score this output" in prompt.lower():
@@ -80,26 +86,26 @@ class EvalForgeClient:
             stop_reason=response.stop_reason
         )
     
-    async def _groq_call(self, prompt: str, system: str = "") -> APIResponse:
-        from openai import AsyncOpenAI
-
-        groq_client = AsyncOpenAI(
-            api_key=os.getenv("GROQ_API_KEY"),
-            base_url="https://api.groq.com/openai/v1"
-        )
-
+    async def _groq_call(
+        self, prompt: str, system: str = "",
+        temperature: float = 0.0, max_tokens: int = 1024
+    ) -> APIResponse:
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
 
-        response = await groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+        response = await self._client.chat.completions.create(
+            model=self.model,
             messages=messages,
-            max_tokens=1024
+            max_tokens=max_tokens,
+            temperature=temperature
         )
 
-        text = response.choices[0].message.content
+        choice = response.choices[0]
+        text   = choice.message.content
+        if not text:
+            raise RuntimeError(f"Groq returned an empty response (finish_reason={choice.finish_reason})")
         input_tokens  = response.usage.prompt_tokens
         output_tokens = response.usage.completion_tokens
 
@@ -108,8 +114,8 @@ class EvalForgeClient:
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             cost_usd=0.0,
-            model="llama-3.3-70b-versatile",
-            stop_reason="end_turn"
+            model=response.model,
+            stop_reason=choice.finish_reason
         )
     
     async def call(
@@ -123,7 +129,7 @@ class EvalForgeClient:
         if self.mock_mode:
             return self._mock_call(prompt, system)
         if self.provider == "groq":
-            return await self._groq_call(prompt, system)
+            return await self._groq_call(prompt, system, temperature, max_tokens)
         return await self._real_call(prompt, system, temperature, max_tokens)
     
 

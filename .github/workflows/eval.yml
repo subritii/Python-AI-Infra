@@ -14,15 +14,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Cache dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('EvalForge/requirements.txt') }}
@@ -31,6 +31,16 @@ jobs:
         working-directory: EvalForge
         run: pip install -r requirements.txt
 
+      - name: Unit tests (offline)
+        working-directory: EvalForge
+        run: python -m pytest -q
+
+      - name: Demo run (mock, offline)
+        working-directory: EvalForge
+        env:
+          MOCK_MODE: "true"
+        run: python run_regression.py
+
       - name: Run regression tests
         working-directory: EvalForge
         env:
@@ -38,6 +48,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           MOCK_MODE: "false"
           PROVIDER: "groq"
+          MODEL: "openai/gpt-oss-120b"
           BASELINE_RUN_ID: ${{ secrets.BASELINE_RUN_ID }}
           MAX_CONCURRENT_CALLS: "1"
           JUDGE_TEMPERATURE: "0.0"

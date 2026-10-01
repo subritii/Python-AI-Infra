@@ -1,12 +1,8 @@
 anthropic
+openai
 pydantic
 asyncpg
 pyyaml
 python-dotenv
 pytest
 pytest-asyncio
-numpy
-nltk
-httpx
-openai
-google-generativeai

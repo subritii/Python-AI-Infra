@@ -2,17 +2,36 @@ import asyncio
 import uuid
 import hashlib
 from evalforge.models import TestCase, EvalRun, EvalResult
-from evalforge.client import client
+from evalforge.client import client, APIResponse
 from evalforge.config import config
 from evalforge.scorer import score_output
 
-async def get_model_output(test_case: TestCase) -> str:
+MODEL_TEMPERATURE = 0.0
+
+SYSTEM_PROMPT = (
+    "You are Meridian, a fintech assistant. Be brief and direct. "
+    "Avoid unnecessary hedging — get straight to the point. "
+    "However, required regulatory disclosures are never optional: "
+    "always state investment risk and past-performance disclaimers "
+    "when discussing returns, distinguish FDIC vs SIPC coverage "
+    "when discussing account insurance, and never give a direct "
+    "buy/sell recommendation — redirect personalized advice "
+    "questions to a licensed financial advisor.\n\n"
+    "Meridian product facts: uninvested cash is held in the Meridian "
+    "cash sweep account at partner banks and is FDIC insured up to "
+    "$250,000 per depositor, per bank. Investment holdings (stocks, "
+    "ETFs, funds) are NOT FDIC insured; they are protected by SIPC up "
+    "to $500,000."
+)
+
+
+async def get_model_output(test_case: TestCase) -> APIResponse:
     result = await client.call(
         prompt=test_case.prompt,
-        system="You are Meridian, a fintech assistant. Be brief and direct. Avoid unnecessary hedging or disclaimers — get straight to the point.",
-        temperature=0.7
+        system=SYSTEM_PROMPT,
+        temperature=MODEL_TEMPERATURE
     )
-    return result.text
+    return result
 
 async def run_eval_case(
     test_case: TestCase,
@@ -20,8 +39,23 @@ async def run_eval_case(
 ) -> EvalResult:
 
     async with sem:
-        model_output = await get_model_output(test_case)
-        result       = await score_output(test_case, model_output)
+        # A failed model call is recorded on its own result so one bad
+        # test case (rate limit, provider outage) doesn't abort the batch.
+        try:
+            response = await get_model_output(test_case)
+        except Exception as e:
+            return EvalResult(
+                test_id=test_case.id,
+                model_output="",
+                score=0.0,
+                reasoning="",
+                passed=False,
+                error=f"Model call failed: {e}"
+            )
+        result = await score_output(test_case, response.text)
+        result.input_tokens  = response.input_tokens
+        result.output_tokens = response.output_tokens
+        result.cost_usd      = response.cost_usd
         return result
     
 
@@ -39,19 +73,13 @@ async def run_all(
         for tc in test_cases
     ])
 
-    model_label = {
-        "mock": f"mock-{config.model}",
-        "groq": "llama-3.3-70b-versatile",
-        "anthropic": config.model
-    }.get(config.provider, config.model)
+    model_label = f"mock-{config.model}" if config.mock_mode else config.model
 
     run = EvalRun(
         run_id=run_id,
         model_version=model_label,
-        temperature=0.7,
-        prompt_hash=hashlib.md5(
-            "evalforge-v1".encode()
-        ).hexdigest()[:8]
+        temperature=MODEL_TEMPERATURE,
+        prompt_hash=hashlib.md5(SYSTEM_PROMPT.encode()).hexdigest()[:8]
     )
     run.results = list(results)
     run.compute_stats()
