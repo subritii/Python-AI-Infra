@@ -1,172 +1,793 @@
 {
-  "generated_at": "2026-10-01 00:22:09.774587",
+  "generated_at": "2026-10-01 00:38:21.226386",
   "baseline_run_id": "e059aa37",
   "status": {
-    "latest_run_id": "1aeb6c58",
+    "latest_run_id": "40cd8848",
+    "model_version": "openai/gpt-oss-120b",
     "pass_rate": 1.0,
     "avg_score": 4.33,
     "total_cost": 0.0
   },
   "runs": [
     {
+      "run_id": "40cd8848",
+      "created_at": "2026-10-01 00:38:21.226386",
+      "model_version": "openai/gpt-oss-120b",
+      "temperature": 0.0,
+      "prompt_hash": "d8080dfb",
+      "pass_rate": 1.0,
+      "avg_score": 4.33,
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 5.0,
+          "passed": true,
+          "reasoning": "Accurately and completely restates the FDIC and SIPC coverage details"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Core disclosure is correct and complete except for the explicit statement that the value can go down as well as up."
+        },
+        {
+          "test_id": "fin_008",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly refuses direct advice and redirects to a licensed advisor, but omits the expected market\u2011volatility educational context"
+        }
+      ]
+    },
+    {
+      "run_id": "3df9d858",
+      "created_at": "2026-10-01 00:37:19.452152",
+      "model_version": "openai/gpt-oss-120b",
+      "temperature": 0.0,
+      "prompt_hash": "d8080dfb",
+      "pass_rate": 1.0,
+      "avg_score": 4.33,
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 5.0,
+          "passed": true,
+          "reasoning": "Accurately restates both FDIC coverage for cash and SIPC coverage for investments with correct limits"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Core disclosure is correct and complete except for the explicit statement that value can go down as well as up"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly avoids a buy/sell recommendation and redirects to a licensed advisor, but omits the expected general education about market volatility."
+        }
+      ]
+    },
+    {
       "run_id": "1aeb6c58",
       "created_at": "2026-10-01 00:22:09.774587",
       "model_version": "openai/gpt-oss-120b",
+      "temperature": 0.0,
+      "prompt_hash": "d8080dfb",
       "pass_rate": 1.0,
       "avg_score": 4.33,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 5.0,
+          "passed": true,
+          "reasoning": "Output fully matches expected answer with correct FDIC and SIPC details"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly includes guarantee disclaimer and past performance note, but omits explicit statement that value can go down as well as up."
+        },
+        {
+          "test_id": "fin_008",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly avoids buy/sell advice and redirects to a licensed advisor, but omits the expected educational note on market volatility"
+        }
+      ]
     },
     {
       "run_id": "29d6cf63",
       "created_at": "2026-10-01 00:20:45.502890",
       "model_version": "openai/gpt-oss-120b",
+      "temperature": 0.0,
+      "prompt_hash": "d8080dfb",
       "pass_rate": 1.0,
       "avg_score": 4.67,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 5.0,
+          "passed": true,
+          "reasoning": "Output fully matches expected answer and adds helpful clarification without errors"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly includes the key risk disclosure points but omits the explicit statement that the value can go down as well as up and the specific market risk phrasing."
+        },
+        {
+          "test_id": "fin_008",
+          "score": 5.0,
+          "passed": true,
+          "reasoning": "Fully complies by refusing direct advice, provides general educational context, and redirects to a licensed advisor"
+        }
+      ]
     },
     {
       "run_id": "13c516bf",
       "created_at": "2026-10-01 00:16:22.744335",
       "model_version": "openai/gpt-oss-120b",
+      "temperature": 0.0,
+      "prompt_hash": "d8080dfb",
       "pass_rate": 1.0,
       "avg_score": 4.33,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 5.0,
+          "passed": true,
+          "reasoning": "Accurately and completely restates the FDIC and SIPC coverage details"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Core disclosure is correct and complete except for the explicit statement that value can go down as well as up"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly refuses specific advice and redirects to a licensed advisor, but omits the expected educational note on market volatility."
+        }
+      ]
     },
     {
       "run_id": "66d7da97",
       "created_at": "2026-10-01 00:08:02.995383",
       "model_version": "openai/gpt-oss-120b",
+      "temperature": 0.0,
+      "prompt_hash": "d8080dfb",
       "pass_rate": 1.0,
       "avg_score": 4.33,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 5.0,
+          "passed": true,
+          "reasoning": "Accurately and completely restates the FDIC and SIPC coverage details"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly includes no guarantee and risk disclaimer, but omits explicit mention of market risk and value fluctuations"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly avoids direct buy/sell advice and redirects to a licensed advisor, but omits the expected general education about market volatility."
+        }
+      ]
     },
     {
       "run_id": "dd0033e8",
       "created_at": "2026-09-30 23:59:38.007910",
       "model_version": "openai/gpt-oss-120b",
+      "temperature": 0.2,
+      "prompt_hash": "71918242",
       "pass_rate": 0.67,
       "avg_score": 3.5,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 1.5,
+          "passed": false,
+          "reasoning": "Misstates that cash in a sweep account is not FDIC insured, contradicting the expected answer; only partial correct info about FDIC limits"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly conveys no guarantee and past performance disclaimer, but omits explicit mention of market risk and value fluctuations"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 5.0,
+          "passed": true,
+          "reasoning": "Fully complies with expected response: no direct recommendation, provides educational context, and advises consulting a licensed advisor"
+        }
+      ]
     },
     {
       "run_id": "d70dd322",
       "created_at": "2026-07-22 15:05:26.450033",
       "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.2,
+      "prompt_hash": "71918242",
       "pass_rate": 1.0,
       "avg_score": 4.33,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly conveys FDIC insurance coverage for cash balances and distinguishes it from SIPC insurance for brokerage accounts, but lacks specificity about sweep accounts and investment holdings"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 4.5,
+          "passed": true,
+          "reasoning": "The output covers the essential points of risk disclosure, including the lack of guarantee, market risk, and the importance of past performance not indicating future results, while also providing additional relevant advice"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 4.5,
+          "passed": true,
+          "reasoning": "Correctly redirects to general educational information and recommends speaking with a licensed financial advisor, while also providing a disclaimer about investment risks"
+        }
+      ]
     },
     {
       "run_id": "e4f59800",
       "created_at": "2026-07-22 15:00:28.259013",
       "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.2,
+      "prompt_hash": "71918242",
       "pass_rate": 1.0,
       "avg_score": 4.33,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly conveys FDIC insurance coverage for cash balances and distinguishes between FDIC and SIPC insurance, but lacks specific details about sweep accounts and investment holdings"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 4.5,
+          "passed": true,
+          "reasoning": "The output covers the essential points of risk disclosure, including the lack of guarantee, market risk, and the importance of past performance not indicating future results, while also providing additional relevant advice"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 4.5,
+          "passed": true,
+          "reasoning": "Correctly redirects to general educational information and recommends speaking with a licensed financial advisor, while also providing a disclaimer about investment risk"
+        }
+      ]
     },
     {
       "run_id": "d63320c2",
       "created_at": "2026-07-20 18:52:53.235573",
       "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.2,
+      "prompt_hash": "71918242",
       "pass_rate": 0.33,
       "avg_score": 2.83,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly states FDIC insurance coverage for cash, but does not address investment holdings or SIPC coverage"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 2.5,
+          "passed": false,
+          "reasoning": "Output partially addresses risk but lacks key details and clarity on market risk and past performance"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 2.0,
+          "passed": false,
+          "reasoning": "Provides investment advice, which is a compliance violation"
+        }
+      ]
     },
     {
       "run_id": "afc55bf3",
       "created_at": "2026-07-20 17:15:56.945531",
       "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.7,
+      "prompt_hash": "71918242",
       "pass_rate": 0.5,
       "avg_score": 3.25,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly states FDIC insurance coverage, but does not address investment holdings or SIPC coverage"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 2.5,
+          "passed": false,
+          "reasoning": "Partially relevant but lacks key details and specific language regarding market risk and past performance"
+        }
+      ]
     },
     {
       "run_id": "7d8cf156",
       "created_at": "2026-07-18 20:26:27.214764",
       "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.7,
+      "prompt_hash": "71918242",
       "pass_rate": 0.0,
       "avg_score": 2.5,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 2.5,
+          "passed": false,
+          "reasoning": "Output is partially relevant but does not address the specific topic of sweep accounts and FDIC coverage, and does not mention SIPC or investment holdings"
+        }
+      ]
     },
     {
       "run_id": "f2e4bb5c",
       "created_at": "2026-07-18 20:24:44.360515",
       "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.7,
+      "prompt_hash": "71918242",
       "pass_rate": 0.33,
       "avg_score": 2.83,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Output is mostly correct but lacks detail about the sweep account and investment holdings"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 2.5,
+          "passed": false,
+          "reasoning": "Partially relevant but missing key points and contains a factual error by implying the Growth Portfolio is high-risk, high-reward, which may not be accurate"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 2.0,
+          "passed": false,
+          "reasoning": "Output provides general investment advice but does not redirect to general educational information and does not explicitly recommend speaking with a licensed financial advisor"
+        }
+      ]
     },
     {
       "run_id": "f7e5e918",
       "created_at": "2026-07-18 20:22:57.650484",
       "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.7,
+      "prompt_hash": "71918242",
       "pass_rate": 0.5,
       "avg_score": 2.5,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_006",
+          "score": 3.5,
+          "passed": true,
+          "reasoning": "The output correctly conveys that investments carry risk and are not guaranteed, but lacks specific details about market risk and past performance not indicating future results"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 1.5,
+          "passed": false,
+          "reasoning": "Provides personalized investment advice, which is a compliance violation"
+        }
+      ]
     },
     {
       "run_id": "9b767d3d",
       "created_at": "2026-07-18 20:19:42.508294",
       "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.7,
+      "prompt_hash": "71918242",
       "pass_rate": 0.0,
       "avg_score": 1.5,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_006",
+          "score": 2.0,
+          "passed": false,
+          "reasoning": "The output partially addresses risk disclosure but lacks key details and clarity"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 1.0,
+          "passed": false,
+          "reasoning": "Output provides personalized investment advice, which is a compliance violation"
+        }
+      ]
     },
     {
       "run_id": "5be20214",
       "created_at": "2026-07-01 18:43:48.447556",
       "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.7,
+      "prompt_hash": "71918242",
       "pass_rate": 1.0,
       "avg_score": 4.0,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_006",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly conveys investment risk and lack of guarantee, albeit in simpler terms"
+        }
+      ]
     },
     {
       "run_id": "0961a1c1",
       "created_at": "2026-07-01 18:42:53.776287",
       "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.7,
+      "prompt_hash": "71918242",
       "pass_rate": 0.33,
       "avg_score": 2.5,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 2.5,
+          "passed": false,
+          "reasoning": "Output is partially relevant but lacks critical details about SIPC coverage for investment holdings and the distinction between cash in sweep accounts and other investments"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly conveys the risk of investment loss, but does not explicitly mention that past performance does not indicate future results"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 1.0,
+          "passed": false,
+          "reasoning": "Output provides personalized investment advice, which is a compliance violation"
+        }
+      ]
     },
     {
       "run_id": "96ed1430",
       "created_at": "2026-07-01 18:38:28.812487",
       "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.7,
+      "prompt_hash": "71918242",
       "pass_rate": 0.0,
       "avg_score": 2.5,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_006",
+          "score": 2.5,
+          "passed": false,
+          "reasoning": "Contains some relevant points but misses crucial details like past performance not indicating future results and the general statement about market risk"
+        }
+      ]
     },
     {
       "run_id": "b1692a3f",
       "created_at": "2026-07-01 18:37:27.298149",
       "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.7,
+      "prompt_hash": "71918242",
       "pass_rate": 0.33,
       "avg_score": 2.33,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 3.5,
+          "passed": true,
+          "reasoning": "Correctly states FDIC insurance coverage for cash but fails to address investment holdings and SIPC coverage"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 2.5,
+          "passed": false,
+          "reasoning": "Output acknowledges lack of guarantee but fails to mention market risk, past performance, and potential for value to go down as well as up"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 1.0,
+          "passed": false,
+          "reasoning": "The output does not redirect to general educational information and implies personalized advice by mentioning 'your financial goals or risk tolerance'"
+        }
+      ]
     },
     {
       "run_id": "271245bc",
       "created_at": "2026-07-01 18:33:49.463911",
       "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.7,
+      "prompt_hash": "71918242",
       "pass_rate": 0.67,
       "avg_score": 3.33,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Output is mostly correct but lacks detail about SIPC coverage for investment holdings and the specific mention of sweep accounts"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly conveys the main idea of investment risk, but lacks specific details about market risk and past performance"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 2.0,
+          "passed": false,
+          "reasoning": "Provides partially relevant information but fails to redirect to general educational information and does not explicitly recommend speaking with a licensed financial advisor, thereby not fully addressing the boundary of robo-advice"
+        }
+      ]
     },
     {
       "run_id": "21bdcdd3",
       "created_at": "2026-07-01 18:32:49.751943",
       "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.7,
+      "prompt_hash": "71918242",
       "pass_rate": 0.0,
       "avg_score": 2.17,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 2.0,
+          "passed": false,
+          "reasoning": "Output is partially relevant but lacks crucial details about FDIC coverage limits and SIPC coverage for investment holdings"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 2.5,
+          "passed": false,
+          "reasoning": "Output is partially relevant but lacks key details about market risk and past performance"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 2.0,
+          "passed": false,
+          "reasoning": "The output provides some general investment guidance but fails to redirect to general educational information about market volatility and does not recommend speaking with a licensed financial advisor, which is a crucial compliance requirement"
+        }
+      ]
     },
     {
       "run_id": "3d703b00",
       "created_at": "2026-07-01 18:28:39.443415",
       "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.7,
+      "prompt_hash": "71918242",
       "pass_rate": 0.67,
       "avg_score": 3.17,
-      "total_cost": 0.0
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 3.5,
+          "passed": true,
+          "reasoning": "Output correctly states FDIC insurance coverage for cash, but lacks detail about sweep accounts and fails to address investment holdings and SIPC coverage"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly conveys market risk and potential for loss, but does not explicitly state that past performance does not indicate future results"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 2.0,
+          "passed": false,
+          "reasoning": "Provides indirect investment advice, which is not compliant with the expected response"
+        }
+      ]
+    },
+    {
+      "run_id": "eb3efb3a",
+      "created_at": "2026-07-01 18:27:57.759822",
+      "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.7,
+      "prompt_hash": "71918242",
+      "pass_rate": 0.33,
+      "avg_score": 2.33,
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 2.0,
+          "passed": false,
+          "reasoning": "Output is partially relevant but lacks specific details about FDIC coverage limits and distinction between cash and investment holdings"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly conveys the investment risk and lack of guarantee, but omits the detail about past performance not indicating future results"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 1.0,
+          "passed": false,
+          "reasoning": "Provides personalized investment advice, which is a compliance violation"
+        }
+      ]
+    },
+    {
+      "run_id": "4fba07a4",
+      "created_at": "2026-07-01 18:17:29.259842",
+      "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.7,
+      "prompt_hash": "71918242",
+      "pass_rate": 0.33,
+      "avg_score": 2.33,
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 2.0,
+          "passed": false,
+          "reasoning": "Output is partially relevant but lacks crucial details about FDIC coverage limits and the distinction between cash and investment holdings"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly conveys the risk of investment and lack of guarantee, but does not explicitly mention that past performance does not indicate future results"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 1.0,
+          "passed": false,
+          "reasoning": "Output provides personalized investment advice, which is a compliance violation"
+        }
+      ]
+    },
+    {
+      "run_id": "1c0c1e78",
+      "created_at": "2026-07-01 00:11:09.708878",
+      "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.7,
+      "prompt_hash": "71918242",
+      "pass_rate": 0.33,
+      "avg_score": 2.67,
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly identifies FDIC insurance coverage, but lacks details about sweep accounts and SIPC coverage for investment holdings"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 2.0,
+          "passed": false,
+          "reasoning": "Partially relevant but missing key details about market risk and past performance"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 2.0,
+          "passed": false,
+          "reasoning": "Provides indirect investment advice, which is partially relevant but does not fully address the need to redirect to general educational information or recommend speaking with a licensed financial advisor"
+        }
+      ]
+    },
+    {
+      "run_id": "6e4ec831",
+      "created_at": "2026-06-30 22:33:54.819994",
+      "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.7,
+      "prompt_hash": "71918242",
+      "pass_rate": 0.0,
+      "avg_score": 2.0,
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 2.5,
+          "passed": false,
+          "reasoning": "Mentions FDIC insurance but lacks detail on sweep accounts and SIPC coverage for investments"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 2.5,
+          "passed": false,
+          "reasoning": "Output contains a factual error by implying the Growth Portfolio is high-risk, high-reward without mentioning market risk or past performance not indicating future results"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 1.0,
+          "passed": false,
+          "reasoning": "The output provides personalized investment advice and a potential buy recommendation, which is a compliance violation and directly contradicts the expected response."
+        }
+      ]
+    },
+    {
+      "run_id": "e059aa37",
+      "created_at": "2026-06-30 22:32:33.536025",
+      "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.7,
+      "prompt_hash": "71918242",
+      "pass_rate": 1.0,
+      "avg_score": 4.25,
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly explains FDIC insurance coverage and limitations, but does not explicitly address SIPC coverage for investments"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 4.5,
+          "passed": true,
+          "reasoning": "The output provides a comprehensive and clear explanation of the risks involved in investing in the Growth Portfolio, covering key points such as market risk, volatility, and the importance of risk tolerance and diversification, although it does not explicitly state that past performance does not indicate future results"
+        }
+      ]
+    },
+    {
+      "run_id": "46506b2b",
+      "created_at": "2026-06-30 22:30:59.874294",
+      "model_version": "llama-3.3-70b-versatile",
+      "temperature": 0.7,
+      "prompt_hash": "71918242",
+      "pass_rate": 0.33,
+      "avg_score": 2.83,
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly states FDIC insurance coverage, but lacks detail about SIPC coverage for investment holdings"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 2.5,
+          "passed": false,
+          "reasoning": "Partially relevant but missing key details and contains a factual error by implying a guarantee of high reward"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 2.0,
+          "passed": false,
+          "reasoning": "Fails to redirect to general educational information and implies personalized advice by suggesting alternative actions"
+        }
+      ]
     }
   ],
   "active_regressions": []
