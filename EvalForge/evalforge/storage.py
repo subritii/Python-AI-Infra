@@ -52,8 +52,8 @@ async def load_baseline(run_id: str, pool) -> dict:
 async def get_recent_runs(limit: int, pool) -> list:
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT run_id, model_version, pass_rate, avg_score,
-                   total_cost, created_at
+            SELECT run_id, model_version, temperature, prompt_hash,
+                   pass_rate, avg_score, total_cost, created_at
             FROM eval_runs
             ORDER BY created_at DESC
             LIMIT $1
@@ -70,17 +70,51 @@ async def get_run_results(run_id: str, pool) -> list:
             ORDER BY test_id
         """, run_id)
         return [dict(row) for row in rows]
-    
 
-async def export_dashboard_data(pool, baseline_run_id: str, output_path: str = "docs/dashboard_data.json"):
-    recent_runs   = await get_recent_runs(20, pool)
-    baseline      = await load_baseline(baseline_run_id, pool)
+
+async def get_results_for_runs(run_ids: list, pool) -> dict:
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT run_id, test_id, score, passed, reasoning
+            FROM eval_results
+            WHERE run_id = ANY($1::text[])
+            ORDER BY test_id
+        """, run_ids)
+    by_run = {}
+    for row in rows:
+        by_run.setdefault(row["run_id"], []).append({
+            "test_id":   row["test_id"],
+            "score":     row["score"],
+            "passed":    row["passed"],
+            "reasoning": row["reasoning"],
+        })
+    return by_run
+
+
+async def export_dashboard_data(
+    pool,
+    baseline_run_id: str,
+    output_path: str = "docs/dashboard_data.json",
+    test_ids: list = None,
+    limit: int = 50
+):
+    recent_runs = await get_recent_runs(limit, pool)
+    baseline    = await load_baseline(baseline_run_id, pool)
+    results     = await get_results_for_runs([r["run_id"] for r in recent_runs], pool)
+
+    # eval_runs is shared by every suite; keep only runs of the suite being exported.
+    if test_ids is not None:
+        wanted      = set(test_ids)
+        recent_runs = [
+            r for r in recent_runs
+            if any(x["test_id"] in wanted for x in results.get(r["run_id"], []))
+        ]
 
     if not recent_runs:
         return
 
     latest = recent_runs[0]
-    latest_results = await get_run_results(latest["run_id"], pool)
+    latest_results = results.get(latest["run_id"], [])
 
     regressions = []
     for r in latest_results:
@@ -100,6 +134,7 @@ async def export_dashboard_data(pool, baseline_run_id: str, output_path: str = "
         "baseline_run_id": baseline_run_id,
         "status": {
             "latest_run_id": latest["run_id"],
+            "model_version": latest["model_version"],
             "pass_rate": latest["pass_rate"],
             "avg_score": latest["avg_score"],
             "total_cost": latest["total_cost"],
@@ -109,9 +144,12 @@ async def export_dashboard_data(pool, baseline_run_id: str, output_path: str = "
                 "run_id": r["run_id"],
                 "created_at": str(r["created_at"]),
                 "model_version": r["model_version"],
+                "temperature": r["temperature"],
+                "prompt_hash": r["prompt_hash"],
                 "pass_rate": r["pass_rate"],
                 "avg_score": r["avg_score"],
                 "total_cost": r["total_cost"],
+                "results": results.get(r["run_id"], []),
             }
             for r in recent_runs
         ],
