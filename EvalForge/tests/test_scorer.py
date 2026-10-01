@@ -1,7 +1,7 @@
 import json
 import pytest
 from evalforge import scorer
-from evalforge.client import APIResponse
+from evalforge.client import APIResponse, EvalForgeClient
 from evalforge.models import TestCase as Case
 from evalforge.scorer import parse_judge_output, score_output
 
@@ -50,7 +50,7 @@ async def test_judge_retries_then_succeeds(monkeypatch):
     async def fake_call(**kwargs):
         return fake_response(next(replies))
 
-    monkeypatch.setattr(scorer.client, "call", fake_call)
+    monkeypatch.setattr(scorer.judge_client, "call", fake_call)
     r = await score_output(make_case(), "a coroutine")
     assert r.error is None and r.score == 4.5
 
@@ -59,6 +59,30 @@ async def test_judge_failure_is_recorded_not_raised(monkeypatch):
     async def fake_call(**kwargs):
         return fake_response("still not json")
 
-    monkeypatch.setattr(scorer.client, "call", fake_call)
+    monkeypatch.setattr(scorer.judge_client, "call", fake_call)
     r = await score_output(make_case(), "a coroutine")
     assert r.error and "3 attempts" in r.error and not r.passed
+
+
+async def test_rate_limited_call_waits_and_retries(monkeypatch):
+
+    class RateLimited(Exception):
+        status_code = 429
+
+    c = EvalForgeClient("groq", "m")
+    c.mock_mode = False
+    calls, sleeps = [], []
+
+    async def fake_groq(*args):
+        calls.append(1)
+        if len(calls) < 3:
+            raise RateLimited("Rate limit reached. Please try again in 2.5s.")
+        return fake_response("ok")
+
+    async def fake_sleep(s):
+        sleeps.append(s)
+
+    monkeypatch.setattr(c, "_groq_call", fake_groq)
+    monkeypatch.setattr("evalforge.client.asyncio.sleep", fake_sleep)
+    r = await c.call("hi")
+    assert r.text == "ok" and len(calls) == 3 and sleeps == [3.5, 3.5]

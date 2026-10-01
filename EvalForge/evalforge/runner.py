@@ -79,7 +79,8 @@ async def run_all(
         run_id=run_id,
         model_version=model_label,
         temperature=MODEL_TEMPERATURE,
-        prompt_hash=hashlib.md5(SYSTEM_PROMPT.encode()).hexdigest()[:8]
+        prompt_hash=hashlib.md5(SYSTEM_PROMPT.encode()).hexdigest()[:8],
+        judge_model=config.judge_model
     )
     run.results = list(results)
     run.compute_stats()

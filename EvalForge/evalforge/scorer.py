@@ -3,7 +3,7 @@ import re
 import asyncio
 from pydantic import ValidationError
 from evalforge.models import TestCase, EvalResult, JudgeResponse
-from evalforge.client import client
+from evalforge.client import judge_client
 from evalforge.config import config
 
 JUDGE_SYSTEM_PROMPT = """You are an eval scoring assistant for EvalForge.
@@ -66,10 +66,13 @@ async def judge_output(
     last_error = None
 
     for attempt in range(max_retries):
-        result = await client.call(
+        result = await judge_client.call(
             prompt=prompt,
             system=JUDGE_SYSTEM_PROMPT,
-            temperature=config.judge_temperature
+            temperature=config.judge_temperature,
+            # A verdict is ~100 tokens. Providers reserve max_tokens against per-minute
+            # limits, so a tight cap keeps more judge calls inside the window.
+            max_tokens=400
         )
         try:
             return parse_judge_output(result.text)

@@ -1,4 +1,5 @@
 import json
+import re
 import asyncio
 from dataclasses import dataclass
 from evalforge.config import config
@@ -17,21 +18,30 @@ class EvalForgeClient:
     INPUT_COST  = 0.000003
     OUTPUT_COST = 0.000015
 
-    def __init__(self):
+    # Rate-limit (429) and transient errors are retried by the SDKs with exponential
+    # backoff that honours Retry-After; Groq's free tier allows 8k tokens/min per model.
+    MAX_RETRIES = 8
+    # The SDK's backoff tops out in seconds; per-minute token windows can need longer.
+    RATE_LIMIT_RETRIES = 4
+
+    def __init__(self, provider: str, model: str):
         self.mock_mode = config.mock_mode
-        self.model     = config.model
-        self.provider  = config.provider
+        self.model     = model
+        self.provider  = provider
         self._client   = None
 
         # Missing keys are reported by config.validate_live() before any call.
         if not self.mock_mode and self.provider == "anthropic" and config.anthropic_api_key:
             import anthropic
-            self._client = anthropic.AsyncAnthropic(api_key=config.anthropic_api_key)
+            self._client = anthropic.AsyncAnthropic(
+                api_key=config.anthropic_api_key, max_retries=self.MAX_RETRIES
+            )
         elif not self.mock_mode and self.provider == "groq" and config.groq_api_key:
             from openai import AsyncOpenAI
             self._client = AsyncOpenAI(
                 api_key=config.groq_api_key,
-                base_url="https://api.groq.com/openai/v1"
+                base_url="https://api.groq.com/openai/v1",
+                max_retries=self.MAX_RETRIES
             )
 
     def _mock_call(self, prompt: str, system: str = "") -> APIResponse:
@@ -128,9 +138,23 @@ class EvalForgeClient:
 
         if self.mock_mode:
             return self._mock_call(prompt, system)
-        if self.provider == "groq":
-            return await self._groq_call(prompt, system, temperature, max_tokens)
-        return await self._real_call(prompt, system, temperature, max_tokens)
+
+        for attempt in range(self.RATE_LIMIT_RETRIES + 1):
+            try:
+                if self.provider == "groq":
+                    return await self._groq_call(prompt, system, temperature, max_tokens)
+                return await self._real_call(prompt, system, temperature, max_tokens)
+            except Exception as e:
+                if getattr(e, "status_code", None) != 429 or attempt == self.RATE_LIMIT_RETRIES:
+                    raise
+                await asyncio.sleep(self._retry_after(e))
+
+    @staticmethod
+    def _retry_after(error: Exception) -> float:
+        # Groq says e.g. "Please try again in 30.754s"; fall back to a full minute window.
+        match = re.search(r"try again in ([\d.]+)s", str(error))
+        return float(match.group(1)) + 1 if match else 60.0
     
 
-client = EvalForgeClient()
+client       = EvalForgeClient(config.provider, config.model)              # model under test
+judge_client = EvalForgeClient(config.judge_provider, config.judge_model)  # LLM judge

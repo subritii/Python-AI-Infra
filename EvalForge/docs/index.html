@@ -177,6 +177,21 @@
   tr.is-baseline td { background: var(--wash); }
   .tag { font-size: 11px; font-weight: 600; color: var(--ink-2); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; margin-left: 6px; }
   details summary { cursor: pointer; font-weight: 600; }
+  .bar { position: relative; width: 90px; height: 6px; border-radius: 3px; background: var(--grid); display: inline-block; vertical-align: middle; margin-left: 8px; }
+  .bar span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--series-1); }
+  .cat-group { margin-top: 18px; }
+  .cat-group h4 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-2); }
+  details.ans { border-top: 1px solid var(--grid); padding: 8px 0; }
+  details.ans summary { display: flex; align-items: center; gap: 8px; list-style: none; font-weight: 500; }
+  details.ans summary::-webkit-details-marker { display: none; }
+  details.ans summary::before { content: "▸"; color: var(--muted); width: 10px; transition: transform .1s; }
+  details.ans[open] summary::before { transform: rotate(90deg); }
+  details.ans summary .score { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ans dl { display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; margin: 10px 0 4px 18px; font-size: 13.5px; }
+  .ans dt { color: var(--muted); }
+  .ans dd { margin: 0; color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .ans dd.answer { color: var(--ink); background: var(--code-bg); border-radius: 6px; padding: 8px 10px; max-height: 260px; overflow-y: auto; }
+  @media (max-width: 560px) { .ans dl { grid-template-columns: 1fr; } .ans dt { margin-top: 6px; } }
   details summary::marker { color: var(--muted); }
 
   /* Highlights */
@@ -248,16 +263,16 @@
     <h2 id="live-title">Latest run</h2>
     <p class="sub" id="live-sub"></p>
     <div class="tiles" id="tiles"></div>
-    <div class="grid-2">
-      <section class="card" aria-labelledby="verdicts-title">
-        <h3 id="verdicts-title">What the judge said</h3>
-        <ul class="tests" id="latest"></ul>
-      </section>
-      <section class="card" aria-labelledby="tests-title">
-        <h3 id="tests-title">The test cases</h3>
-        <ul class="tests" id="testdefs"></ul>
-      </section>
-    </div>
+    <section class="card" style="margin-top:16px" aria-labelledby="cats-title">
+      <h3 id="cats-title">Results by category</h3>
+      <div class="table-scroll"><table id="categories"></table></div>
+    </section>
+    <section class="card" style="margin-top:16px" aria-labelledby="answers-title">
+      <h3 id="answers-title">Every answer, judged</h3>
+      <p class="sub" style="margin:4px 0 0;font-size:14px">Failing tests are expanded. Open any test to see the question,
+        what the model answered, what a compliance reviewer expects, and the judge's verdict.</p>
+      <div id="answers"></div>
+    </section>
     <details class="card" style="margin-top:16px">
       <summary>Full run history (<span id="run-count"></span> runs)</summary>
       <p class="sub" id="table-note" style="margin:10px 0 0;font-size:13px"></p>
@@ -270,12 +285,12 @@
     <h2 id="eng-title">Design decisions</h2>
     <p class="sub">An eval is only useful if you can trust it. These are the parts that make it trustworthy.</p>
     <div class="highlights">
-      <div class="card"><h3>Judge output is validated</h3><p>Every verdict is parsed into a Pydantic model (score 1–5,
-        non-empty reasoning). Invalid output is retried up to 3 times, with the parse error fed back to the judge.</p></div>
+      <div class="card"><h3>An independent, validated judge</h3><p>A different model family grades the answers, so the
+        model never grades itself. Every verdict is parsed into a Pydantic model and retried with the parse error on failure.</p></div>
       <div class="card"><h3>Failures can't hide</h3><p>A test that errors (rate limit, outage, retired model) fails the
         gate. A broken provider can never show up as "no regressions".</p></div>
-      <div class="card"><h3>Bounded async fan-out</h3><p>Test cases run concurrently with <code>asyncio.gather</code>,
-        capped by a semaphore so the suite stays inside provider rate limits.</p></div>
+      <div class="card"><h3>Built for rate limits</h3><p>Test cases fan out with <code>asyncio.gather</code> under a
+        semaphore. Rate-limited calls wait out the provider's token window and retry instead of failing the run.</p></div>
       <div class="card"><h3>Runs fully offline</h3><p>Demo mode swaps in a deterministic mock for both model and judge,
         so the whole pipeline runs with no API keys or database. CI runs it before the live suite.</p></div>
       <div class="card"><h3>Fails fast on bad config</h3><p>Provider, API keys and database are validated at startup,
@@ -300,6 +315,13 @@
 <script>
 (() => {
   const TOPICS = { fin_003: "FDIC coverage", fin_006: "Risk disclosure", fin_008: "Advice boundary" };
+  // The case-study chart follows the original three tests, which have history back to the first run.
+  const STORY_TESTS = ["fin_003", "fin_006", "fin_008"];
+  const CATEGORY_LABELS = {
+    risk_disclosure: "Risk disclosure", deposit_insurance: "Deposit insurance", advice_boundary: "Advice boundary",
+    prompt_injection: "Prompt injection", privacy_security: "Privacy & security", scope: "Scope", hallucination: "Hallucination",
+  };
+  let DEFS = {};
   const SERIES_VARS = ["--series-1", "--series-2", "--series-3"];
   const PASS = 3.0, GATE_DROP = 1.0;
   const SVG_NS = "http://www.w3.org/2000/svg";
@@ -310,7 +332,21 @@
   //   setsBaseline  "first" | "last": that run becomes the baseline for later eras
   //   focusFromPrev keep the previous era's focus test (follow a regression through its fix)
   const STORY = {
-    "llama-3.3-70b-versatile|0.7": {
+    "openai/gpt-oss-120b|0|qwen/qwen3.8-27b": {
+      short: "Bigger suite",
+      title: "A bigger suite and an independent judge",
+      setsBaseline: "first",
+      suite: true,
+      quoteCategory: "hallucination",
+      body: (c) => [
+        `Two upgrades. The suite grew from 3 to ${c.suite.n} tests across ${c.suite.cats} categories, adding prompt ` +
+        `injection, privacy and hallucination checks. Grading moved to ${shortModel(c.first.judge_model)}, a different ` +
+        `model family, so the model no longer grades its own answers.`,
+        `The first full run passed ${c.suite.passed} of ${c.suite.n}. The new tests found problems the original three ` +
+        `couldn't: ${c.suite.failSummary}.`
+      ],
+    },
+    "llama-3.3-70b-versatile|0.7|self": {
       short: "Prototype",
       title: "Prototype: the judge flags compliance failures",
       body: (c) => [
@@ -320,7 +356,7 @@
         `what a regulator would object to.`
       ],
     },
-    "llama-3.3-70b-versatile|0.2": {
+    "llama-3.3-70b-versatile|0.2|self": {
       short: "Prompt hardening",
       title: "Hardening the prompt",
       compareLast: true,
@@ -331,7 +367,7 @@
         `became the regression baseline.`
       ],
     },
-    "openai/gpt-oss-120b|0.2": {
+    "openai/gpt-oss-120b|0.2|self": {
       short: "Model retired",
       title: "The provider retired the model",
       body: (c) => [
@@ -340,7 +376,7 @@
         (c.compare && c.compare.failed ? ` This one did.` : ``)
       ],
     },
-    "openai/gpt-oss-120b|0": {
+    "openai/gpt-oss-120b|0|self": {
       short: "Root cause & fix",
       title: "Root cause and fix",
       setsBaseline: "first",
@@ -370,9 +406,13 @@
   const fmtDay = (d) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
   const fmtFull = (d) => fmtDay(d) + ", " + d.toISOString().slice(11, 16) + " UTC";
   const fmtScore = (s) => s == null ? "–" : s.toFixed(1);
-  const shortModel = (m) => (m || "").replace(/^openai\//, "").replace(/-versatile$/, "");
+  const shortModel = (m) => (m || "").replace(/^[^/]+\//, "").replace(/-versatile$/, "");
+  const ACRONYMS = /\b(fdic|sipc|ssn|ira|sec)\b/gi;
+  const humanize = (s) => s ? (s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ")).replace(ACRONYMS, (m) => m.toUpperCase()) : s;
+  const catLabel = (c) => CATEGORY_LABELS[c] || humanize(c) || "Other";
   const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  const topic = (t) => TOPICS[t] || t;
+  const topic = (t) => TOPICS[t] || (DEFS[t] && humanize(DEFS[t].topic)) || t;
+  const judgeOf = (r) => r.judge_model || r.model_version;   // older runs were graded by the model itself
 
   fetch("dashboard_data.json", { cache: "no-store" })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
@@ -390,15 +430,18 @@
       r.scores = {}; r.byTest = {};
       for (const x of r.results || []) { r.scores[x.test_id] = x.score; r.byTest[x.test_id] = x; }
     });
-    const tests = [...new Set(runs.flatMap((r) => Object.keys(r.scores)))].sort();
+    DEFS = Object.fromEntries((data.tests || []).map((t) => [t.id, t]));
+    const allTests = [...new Set(runs.flatMap((r) => Object.keys(r.scores)))].sort();
+    let tests = STORY_TESTS.filter((t) => allTests.includes(t));
+    if (!tests.length) tests = allTests.slice(0, 3);
     const ctx = {
-      runs, tests,
+      runs, tests, allTests,
       color: Object.fromEntries(tests.map((t, i) => [t, SERIES_VARS[i % SERIES_VARS.length]])),
       latest: runs[runs.length - 1],
       baselineId: data.baseline_run_id,
       regressions: data.active_regressions || [],
       events: findEvents(runs),
-      defs: Object.fromEntries((data.tests || []).map((t) => [t.id, t])),
+      defs: DEFS,
     };
     ctx.chapters = buildChapters(ctx);
 
@@ -415,7 +458,8 @@
     const events = [];
     for (let i = 1; i < runs.length; i++) {
       const a = runs[i - 1], b = runs[i];
-      if (a.model_version !== b.model_version || a.temperature !== b.temperature || a.prompt_hash !== b.prompt_hash) {
+      if (a.model_version !== b.model_version || a.temperature !== b.temperature ||
+          a.prompt_hash !== b.prompt_hash || judgeOf(a) !== judgeOf(b)) {
         events.push({ index: i, n: events.length + 1 });
       }
     }
@@ -437,7 +481,7 @@
     const { runs, tests } = ctx;
     const segs = [];
     for (const r of runs) {
-      const key = r.model_version + "|" + r.temperature;
+      const key = `${r.model_version}|${r.temperature}|${r.judge_model || "self"}`;
       const last = segs[segs.length - 1];
       if (last && last.key === key) last.runs.push(r); else segs.push({ key, runs: [r] });
     }
@@ -485,6 +529,31 @@
         c.toScore = fmtScore(keyRun.scores[c.focus]);
       }
 
+      // Suite-change era: summarise the first full run by category. No gate verdict here: scores
+      // from a new judge aren't comparable with the old judge's baseline, so this run becomes the baseline.
+      if (story && story.suite) {
+        const res = first.results || [], byCat = {};
+        for (const x of res) {
+          const cat = (DEFS[x.test_id] || {}).category || "other";
+          byCat[cat] = byCat[cat] || { n: 0, fail: 0 };
+          byCat[cat].n++;
+          if (x.score < PASS) byCat[cat].fail++;
+        }
+        const failing = Object.entries(byCat).filter(([, v]) => v.fail)
+          .sort((a, b) => b[1].fail / b[1].n - a[1].fail / a[1].n);
+        c.suite = {
+          n: res.length, cats: Object.keys(byCat).length, byCat,
+          passed: res.filter((x) => x.score >= PASS).length,
+          failSummary: failing.map(([k, v]) => `${catLabel(k).toLowerCase()} (${v.fail} of ${v.n} failed)`).join(", ") || "none",
+        };
+        const q = res.filter((x) => x.score < PASS && x.reasoning &&
+            (!story.quoteCategory || (DEFS[x.test_id] || {}).category === story.quoteCategory))
+          .sort((a, b) => a.score - b.score)[0];
+        c.quote = q ? { text: q.reasoning, test: q.test_id, run: first } : null;
+        c.compare = null;
+        c.key_i = first.i;
+      }
+
       c.short = story ? story.short : `${shortModel(first.model_version)} · temp ${first.temperature}`;
       c.title = story ? story.title : `${shortModel(first.model_version)} at temperature ${first.temperature}`;
       c.body = story ? story.body(c)
@@ -504,7 +573,7 @@
       body: [`${runs.length} runs tracked. The latest run, ${latest.run_id}, passed ${Math.round(latest.pass_rate * 100)}% of ` +
              `tests with an average judge score of ${latest.avg_score.toFixed(2)} / 5.`,
              `Every push to main re-runs the suite against the baseline and refreshes this page.`],
-      compare: base && base !== latest ? { before: base, after: latest, ...gate(base, latest, tests) } : null,
+      compare: base && base !== latest ? { before: base, after: latest, ...gate(base, latest, ctx.allTests) } : null,
     });
     return chapters;
   }
@@ -522,6 +591,7 @@
       el("div", { class: "label" }, "Live status"), big,
       row("Latest run", latest.run_id, true),
       row("Model", shortModel(latest.model_version)),
+      row("Judge", shortModel(judgeOf(latest))),
       row("Pass rate", Math.round(latest.pass_rate * 100) + "%"),
       row("Avg judge score", latest.avg_score.toFixed(2) + " / 5"),
       row("Baseline", baselineId || "none", true),
@@ -535,6 +605,8 @@
     const t = latest.byTest.fin_003 ? "fin_003" : Object.keys(latest.byTest)[0];
     const def = defs[t], verdict = latest.byTest[t];
     const answers = runs.reduce((a, r) => a + (r.results || []).length, 0);
+    const nCases = Object.keys(defs).length || Object.keys(latest.byTest).length;
+    const nCats = new Set(Object.values(defs).map((d) => d.category)).size || 1;
 
     const yaml = def
       ? `- id: ${def.id}\n  topic: ${def.topic}\n  prompt: "${def.prompt}"\n  expected_output: >\n    ${def.expected_output}\n  metric: llm_judge`
@@ -544,10 +616,10 @@
       : "{ … }";
 
     const steps = [
-      ["Write test cases", "Each case is a question plus the answer a compliance reviewer expects, in YAML.", yaml],
+      ["Write test cases", `${nCases} cases across ${nCats} categories. Each is a question plus the behaviour a compliance reviewer expects, in YAML.`, yaml],
       ["Ask the model", "The app's system prompt and the question go to the model under test. Groq and Anthropic are supported, plus an offline mock.",
         `provider:    groq\nmodel:       ${latest.model_version}\ntemperature: ${latest.temperature}\nconcurrency: semaphore-bounded`],
-      ["Judge the answer", "A second LLM grades the answer against the expected one on a 1–5 rubric and returns JSON.", judge],
+      ["Judge the answer", `A second LLM from a different model family (${shortModel(judgeOf(latest))}) grades the answer on a 1–5 rubric and returns JSON.`, judge],
       ["Store the run", "Every run and every per-test score goes to Postgres, so any two runs can be compared.",
         `${runs.length} runs\n${answers} judged answers`],
       ["Gate the change", `If any test drops ${GATE_DROP.toFixed(1)} or more below the baseline run, CI fails and the change is blocked.`,
@@ -612,7 +684,15 @@
         document.createTextNode(c.compare.failed ? "Gate: fail, CI blocked" : "Gate: pass"),
         el("small", {}, `${c.compare.after.run_id} vs baseline ${c.compare.before.run_id}`));
       const ul = el("ul");
-      for (const r of c.compare.rows) {
+      // A full-suite gate lists only what dropped; short lists show every test.
+      const long = c.compare.rows.length > 6;
+      const shown = long ? c.compare.rows.filter((r) => r.regressed) : c.compare.rows;
+      if (long) {
+        const dropped = shown.length;
+        ul.append(el("li", { class: "flat" }, `${c.compare.rows.length} tests compared · ` +
+          (dropped ? `${dropped} dropped ${GATE_DROP.toFixed(1)} or more` : `none dropped ${GATE_DROP.toFixed(1)} or more`)));
+      }
+      for (const r of shown) {
         const li = el("li");
         const sw = el("span", { class: "swatch" }); sw.style.background = `var(${ctx.color[r.t]})`;
         const cls = r.regressed ? "down" : r.d > 0 ? "up" : "flat";
@@ -622,6 +702,20 @@
         ul.append(li);
       }
       v.append(head, ul);
+      nodes.push(v);
+    } else if (c.suite) {
+      const v = el("div", { class: "verdict" }), head = el("div", { class: "head" });
+      head.append(document.createTextNode(`${c.suite.passed} of ${c.suite.n} passed`), el("small", {}, `run ${c.first.run_id}`));
+      const ul = el("ul");
+      for (const [cat, x] of Object.entries(c.suite.byCat).sort((a, b) => b[1].fail - a[1].fail)) {
+        const li = el("li");
+        li.append(el("span", { class: "t" }, catLabel(cat)),
+          el("span", { class: x.fail ? "down" : "up", style: "min-width:68px;text-align:right" },
+            `${x.n - x.fail} / ${x.n}` + (x.fail ? " ✕" : " ✓")));
+        ul.append(li);
+      }
+      v.append(head, ul, el("div", { class: "flat", style: "font-size:12.5px;margin-top:8px" },
+        "Not gated: a new judge's scores aren't comparable with the old baseline, so this run became the new baseline."));
       nodes.push(v);
     } else if (!c.today) {
       const v = el("div", { class: "verdict" }), head = el("div", { class: "head" });
@@ -695,9 +789,13 @@
         while (keep.length && i === runs.length - 1 && x(i) - x(keep[keep.length - 1]) < 52) keep.pop();
         if (!keep.length || x(i) - x(keep[keep.length - 1]) >= 52) keep.push(i);
       }
+      let lastLabel = null;
       for (const i of keep) {
+        const label = fmtDay(runs[i].date);
+        if (label === lastLabel) continue;   // several runs on one day: label the day once
+        lastLabel = label;
         const t = svg("text", { x: x(i), y: m.t + ph + 18, class: "tick", "text-anchor": i === 0 ? "start" : i === runs.length - 1 ? "end" : "middle" });
-        t.textContent = fmtDay(runs[i].date); root.append(t);
+        t.textContent = label; root.append(t);
       }
 
       const surface = cssVar("--surface");
@@ -777,7 +875,7 @@
   // ---------- live ----------
 
   function renderLive(ctx) {
-    const { latest, regressions, runs, tests, color, defs, baselineId } = ctx;
+    const { latest, regressions, runs, tests, defs, baselineId } = ctx;
     $("live-sub").textContent = `Run ${latest.run_id} on ${shortModel(latest.model_version)}, ${fmtFull(latest.date)}.`;
     const tile = (label, value, unit, note) => {
       const t = el("div", { class: "tile" });
@@ -787,37 +885,68 @@
       return t;
     };
     $("tiles").replaceChildren(
-      tile("Pass rate", Math.round(latest.pass_rate * 100) + "%", "", Object.keys(latest.scores).length + " tests"),
+      tile("Pass rate", Math.round(latest.pass_rate * 100) + "%", "",
+        `${Object.values(latest.scores).filter((v) => v >= PASS).length} of ${Object.keys(latest.scores).length} tests`),
       tile("Avg judge score", latest.avg_score.toFixed(2), "/ 5", "1 = wrong, 5 = perfect"),
       tile("Active regressions", String(regressions.length), "", "drop ≥ 1.0 vs baseline"),
       tile("Runs tracked", String(runs.length), "", "since " + fmtDay(runs[0].date)));
 
-    $("latest").replaceChildren(...tests.filter((t) => latest.byTest[t]).map((t) => {
-      const x = latest.byTest[t], failed = x.score < PASS;
-      const li = el("li"), row = el("div", { class: "row" });
-      const sw = el("span", { class: "swatch" }); sw.style.background = `var(${color[t]})`;
-      row.append(sw, el("b", {}, topic(t)), el("span", { class: "score" }, fmtScore(x.score)),
-        el("span", { class: "pf " + (failed ? "down" : "up") }, failed ? "✕ fail" : "✓ pass"));
-      li.append(row, el("p", {}, x.reasoning));
-      return li;
-    }));
+    // Results by category.
+    const ids = Object.keys(latest.byTest);
+    const groups = {};
+    for (const t of ids) {
+      const cat = (defs[t] || {}).category || "other";
+      (groups[cat] = groups[cat] || []).push(t);
+    }
+    const order = [...Object.keys(CATEGORY_LABELS), ...Object.keys(groups)].filter((c, i, a) => groups[c] && a.indexOf(c) === i);
+    const cthead = el("thead"), chr = el("tr");
+    ["Category", "Tests"].forEach((h) => chr.append(el("th", {}, h)));
+    ["Pass rate", "Avg score"].forEach((h) => chr.append(el("th", { class: "n" }, h)));
+    chr.append(el("th", {}, "Failing"));
+    cthead.append(chr);
+    const ctbody = el("tbody");
+    for (const cat of order) {
+      const g = groups[cat], scores = g.map((t) => latest.scores[t]);
+      const passed = scores.filter((v) => v >= PASS).length, rate = passed / g.length;
+      const tr = el("tr");
+      const rc = el("td", { class: "n" }, Math.round(rate * 100) + "%");
+      const bar = el("span", { class: "bar", "aria-hidden": "true" }), fill = el("span");
+      fill.style.width = (rate * 100) + "%"; bar.append(fill); rc.append(bar);
+      const failing = g.filter((t) => latest.scores[t] < PASS).map(topic);
+      tr.append(el("td", {}, catLabel(cat)), el("td", {}, `${passed} / ${g.length}`), rc,
+        el("td", { class: "n" }, (scores.reduce((a, b) => a + b, 0) / g.length).toFixed(2)),
+        el("td", { class: failing.length ? "down" : "flat", style: "white-space:normal" }, failing.length ? "✕ " + failing.join(", ") : "none"));
+      ctbody.append(tr);
+    }
+    $("categories").replaceChildren(cthead, ctbody);
 
-    const ids = Object.keys(defs).length ? Object.keys(defs).sort() : tests;
-    $("testdefs").replaceChildren(...ids.map((t) => {
-      const d = defs[t], li = el("li"), row = el("div", { class: "row" });
-      const sw = el("span", { class: "swatch" }); sw.style.background = `var(${color[t] || "--muted"})`;
-      row.append(sw, el("b", {}, topic(t)), el("span", { class: "mono", style: "margin-left:auto;color:var(--muted)" }, t));
-      li.append(row);
-      if (d) {
-        li.append(el("p", {}, "Q: “" + d.prompt + "”"));
-        li.append(el("p", { style: "color:var(--muted)" }, "Expected: " + d.expected_output));
+    // Every answer, grouped by category; failures open.
+    $("answers").replaceChildren(...order.map((cat) => {
+      const box = el("div", { class: "cat-group" });
+      box.append(el("h4", {}, catLabel(cat)));
+      for (const t of groups[cat]) {
+        const x = latest.byTest[t], d = defs[t] || {}, failed = x.score < PASS;
+        const det = el("details", failed ? { class: "ans", open: "" } : { class: "ans" });
+        const sum = el("summary");
+        sum.append(el("span", { class: "icon sm " + (failed ? "bad" : "good"), "aria-hidden": "true" }, failed ? "✕" : "✓"),
+          el("span", {}, topic(t)), el("span", { class: "mono", style: "color:var(--muted)" }, t),
+          el("span", { class: "score" }, fmtScore(x.score)),
+          el("span", { class: "pf " + (failed ? "down" : "up") }, failed ? "fail" : "pass"));
+        const dl = el("dl");
+        const add = (k, v, cls) => { if (v) dl.append(el("dt", {}, k), el("dd", cls ? { class: cls } : {}, v)); };
+        add("Question", d.prompt && "“" + d.prompt + "”");
+        add("Model answer", x.model_output && x.model_output.replace(/\*\*/g, ""), "answer");   // drop markdown bold markers
+        add("Expected", d.expected_output);
+        add("Judge", x.reasoning);
+        det.append(sum, dl);
+        box.append(det);
       }
-      return li;
+      return box;
     }));
 
     $("run-count").textContent = runs.length;
     const thead = el("thead"), hr = el("tr");
-    ["Run", "Date (UTC)", "Model", "Temp", "Prompt"].forEach((h) => hr.append(el("th", {}, h)));
+    ["Run", "Date (UTC)", "Model", "Judge", "Temp", "Prompt"].forEach((h) => hr.append(el("th", {}, h)));
     ["Pass rate", "Avg", ...tests.map(topic)].forEach((h) => hr.append(el("th", { class: "n" }, h)));
     thead.append(hr);
     const tbody = el("tbody");
@@ -827,7 +956,7 @@
       if (r.run_id === baselineId) idc.append(el("span", { class: "tag" }, "baseline"));
       const pc = el("td"); pc.append(el("code", {}, r.prompt_hash || "–"));
       tr.append(idc, el("td", {}, fmtFull(r.date).replace(" UTC", "")), el("td", {}, shortModel(r.model_version)),
-        el("td", { class: "n" }, String(r.temperature)), pc,
+        el("td", {}, r.judge_model ? shortModel(r.judge_model) : "self"), el("td", { class: "n" }, String(r.temperature)), pc,
         el("td", { class: "n" }, Math.round(r.pass_rate * 100) + "%"), el("td", { class: "n" }, r.avg_score.toFixed(2)));
       for (const t of tests) {
         const s = r.scores[t];
@@ -836,8 +965,9 @@
       tbody.append(tr);
     }
     $("history").replaceChildren(thead, tbody);
-    $("table-note").textContent = "Newest first. ✕ marks a failing judge score; “–” means the test errored or wasn't in that run. " +
-      "Prompt hashes are tracked from Sep 30, 2026; earlier runs share one placeholder hash.";
+    $("table-note").textContent = "Newest first. Score columns show the three original tests, which have the longest history. " +
+      "✕ marks a failing judge score; “–” means the test errored or wasn't in that run. “self” means the model graded its own " +
+      "answers (before the independent judge). Prompt hashes are tracked from Sep 30, 2026; earlier runs share one placeholder hash.";
   }
 })();
 </script>
