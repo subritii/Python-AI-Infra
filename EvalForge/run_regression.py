@@ -8,6 +8,7 @@ from evalforge.config import config, ConfigError
 
 async def run_regression(baseline_run_id: str = None) -> bool:
     test_cases = load_test_cases("test_cases/meridian_advisor.yaml")
+    test_ids   = [tc.id for tc in test_cases]
 
     mode = "DEMO (mock, offline)" if config.mock_mode else f"LIVE ({config.provider}: {config.model})"
     print(f"Mode: {mode}")
@@ -44,7 +45,7 @@ async def run_regression(baseline_run_id: str = None) -> bool:
     if baseline_run_id is None:
         print("\nNo baseline set — this run will be the baseline.")
         print(f"Set BASELINE_RUN_ID={run.run_id} in .env to use it.")
-        await export_dashboard_data(pool, run.run_id)
+        await export_dashboard_data(pool, run.run_id, test_ids=test_ids)
         await pool.close()
         return True
 
@@ -53,7 +54,7 @@ async def run_regression(baseline_run_id: str = None) -> bool:
 
     if not baseline:
         print("Baseline run not found in database.")
-        await export_dashboard_data(pool, run.run_id)
+        await export_dashboard_data(pool, run.run_id, test_ids=test_ids)
         await pool.close()
         return True
 
@@ -79,7 +80,7 @@ async def run_regression(baseline_run_id: str = None) -> bool:
     else:
         print("\n✅ No regressions detected.")
 
-    await export_dashboard_data(pool, baseline_run_id)
+    await export_dashboard_data(pool, baseline_run_id, test_ids=test_ids)
     await pool.close()
     return len(regressions) == 0
 

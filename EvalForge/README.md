@@ -14,6 +14,23 @@ YAML test cases → model call → judge call → EvalRun → Postgres → dashb
                    (bounded concurrency)   (validated JSON, retries)   (regression gate)
 ```
 
+## Live dashboard
+
+**[subritii.github.io/Python-AI-Infra](https://subritii.github.io/Python-AI-Infra/)** shows per-test judge
+scores across every run, the model, prompt and temperature changes that moved them, and the judge's
+reasoning. CI rebuilds it on every push to `main`.
+
+## What it caught
+
+When Groq retired `llama-3.3-70b-versatile`, the suite moved to `openai/gpt-oss-120b`. On the first run with the
+new model, the FDIC coverage test (`fin_003`) dropped from 4.0 to 1.5 and the gate failed CI. The judge's
+reasoning: the model said cash in the sweep account is *not* FDIC insured. That's a compliance error a customer
+could act on.
+
+Repeated trials showed it wasn't noise: scores of 5.0, 3.5 and 5.0, with the 1.5 in between. The system prompt
+never told Meridian how its own products work, so the model guessed. After adding product facts to the prompt
+and setting temperature to 0, the test scored 5.0 in 5 of 5 trials, and that run became the new baseline.
+
 ## Quick start (demo mode: offline, no keys, no database)
 
 ```bash
@@ -60,9 +77,11 @@ missing database fails fast with a clear message.
 - **Failure isolation:** a failed model or judge call is recorded on that test
   case and doesn't abort the batch. Any errored case fails the run and the run
   isn't saved, so a broken provider can never show up as "no regressions".
+- **Judge variance:** the same answer can score 0.5–1.0 apart between runs, which is close to the 1.0
+  regression threshold. The dashboard shows this run-to-run spread on purpose.
 - **CI:** `.github/workflows/eval.yml` runs the unit tests, then the offline
   demo, then the live regression against Groq. On pushes to `main` it commits
-  the refreshed `docs/dashboard_data.json`.
+  the refreshed `docs/dashboard_data.json` and deploys the dashboard to GitHub Pages.
 
 ## Layout
 
@@ -70,5 +89,6 @@ missing database fails fast with a clear message.
 evalforge/   config, client (mock/groq/anthropic), runner, scorer, storage, models
 test_cases/  YAML suites
 tests/       offline pytest suite
+docs/        dashboard (index.html) and the data CI exports for it
 schema.sql   Postgres tables for live mode
 ```

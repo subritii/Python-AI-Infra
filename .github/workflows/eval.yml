@@ -65,3 +65,29 @@ jobs:
           git fetch origin main
           git rebase origin/main
           git push origin HEAD:main
+      - name: Upload dashboard site
+        if: always() && github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: EvalForge/docs
+
+  # Separate job: the github-pages environment only accepts the default branch,
+  # so PR runs must never reference it. Deploys even when a regression fails the
+  # tests above, so the dashboard shows the regression.
+  deploy-dashboard:
+    needs: regression-tests
+    if: always() && github.event_name == 'push' && needs.regression-tests.result != 'cancelled'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
