@@ -1,16 +1,24 @@
 
 import json
 import os
+from pathlib import Path
 import asyncpg
 from evalforge.models import EvalRun, EvalResult
 from evalforge.config import config
 
+SCHEMA_PATH = Path(__file__).resolve().parent.parent / "schema.sql"
+
+
 async def get_pool():
-    return await asyncpg.create_pool(
+    pool = await asyncpg.create_pool(
         config.database_url,
         min_size=2,
         max_size=10
     )
+    # schema.sql is idempotent (IF NOT EXISTS everywhere), so this creates or upgrades in place.
+    async with pool.acquire() as conn:
+        await conn.execute(SCHEMA_PATH.read_text())
+    return pool
 
 
 async def save_run(run: EvalRun, pool) -> None:
@@ -19,11 +27,11 @@ async def save_run(run: EvalRun, pool) -> None:
             await conn.execute("""
                 INSERT INTO eval_runs
                     (run_id, model_version, temperature, prompt_hash,
-                     pass_rate, avg_score, total_cost)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                     judge_model, pass_rate, avg_score, total_cost)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             """,
-            run.run_id, run.model_version, run.temperature,
-            run.prompt_hash, run.pass_rate, run.avg_score, run.total_cost
+            run.run_id, run.model_version, run.temperature, run.prompt_hash,
+            run.judge_model or None, run.pass_rate, run.avg_score, run.total_cost
             )
 
             for result in run.results:
@@ -31,11 +39,11 @@ async def save_run(run: EvalRun, pool) -> None:
                     await conn.execute("""
                         INSERT INTO eval_results
                             (run_id, test_id, score, passed, reasoning,
-                             issues, input_tokens, output_tokens, cost_usd)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                             issues, model_output, input_tokens, output_tokens, cost_usd)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                     """,
                     run.run_id, result.test_id, result.score,
-                    result.passed, result.reasoning, result.issues,
+                    result.passed, result.reasoning, result.issues, result.model_output,
                     result.input_tokens, result.output_tokens, result.cost_usd
                     )
 
@@ -52,7 +60,7 @@ async def load_baseline(run_id: str, pool) -> dict:
 async def get_recent_runs(limit: int, pool) -> list:
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT run_id, model_version, temperature, prompt_hash,
+            SELECT run_id, model_version, temperature, prompt_hash, judge_model,
                    pass_rate, avg_score, total_cost, created_at
             FROM eval_runs
             ORDER BY created_at DESC
@@ -61,21 +69,10 @@ async def get_recent_runs(limit: int, pool) -> list:
         return [dict(row) for row in rows]
 
 
-async def get_run_results(run_id: str, pool) -> list:
-    async with pool.acquire() as conn:
-        rows = await conn.fetch("""
-            SELECT test_id, score, passed, reasoning
-            FROM eval_results
-            WHERE run_id = $1
-            ORDER BY test_id
-        """, run_id)
-        return [dict(row) for row in rows]
-
-
 async def get_results_for_runs(run_ids: list, pool) -> dict:
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT run_id, test_id, score, passed, reasoning
+            SELECT run_id, test_id, score, passed, reasoning, model_output
             FROM eval_results
             WHERE run_id = ANY($1::text[])
             ORDER BY test_id
@@ -87,6 +84,7 @@ async def get_results_for_runs(run_ids: list, pool) -> dict:
             "score":     row["score"],
             "passed":    row["passed"],
             "reasoning": row["reasoning"],
+            "model_output": row["model_output"],
         })
     return by_run
 
@@ -116,6 +114,12 @@ async def export_dashboard_data(
     latest = recent_runs[0]
     latest_results = results.get(latest["run_id"], [])
 
+    # Full answers only for the latest run; older runs keep scores and reasoning,
+    # which keeps the exported JSON small.
+    for r in recent_runs[1:]:
+        for x in results.get(r["run_id"], []):
+            x.pop("model_output", None)
+
     regressions = []
     for r in latest_results:
         if r["test_id"] in baseline:
@@ -135,6 +139,7 @@ async def export_dashboard_data(
         "status": {
             "latest_run_id": latest["run_id"],
             "model_version": latest["model_version"],
+            "judge_model": latest["judge_model"],
             "pass_rate": latest["pass_rate"],
             "avg_score": latest["avg_score"],
             "total_cost": latest["total_cost"],
@@ -146,6 +151,7 @@ async def export_dashboard_data(
                 "model_version": r["model_version"],
                 "temperature": r["temperature"],
                 "prompt_hash": r["prompt_hash"],
+                "judge_model": r["judge_model"],
                 "pass_rate": r["pass_rate"],
                 "avg_score": r["avg_score"],
                 "total_cost": r["total_cost"],
@@ -157,6 +163,7 @@ async def export_dashboard_data(
         "tests": [
             {
                 "id": tc.id,
+                "category": tc.category,
                 "topic": tc.topic,
                 "prompt": tc.prompt,
                 "expected_output": tc.expected_output.strip(),

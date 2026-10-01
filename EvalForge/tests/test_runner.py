@@ -53,3 +53,39 @@ def test_live_mode_requires_api_key(monkeypatch):
     assert live.model == "openai/gpt-oss-120b"
     with pytest.raises(ConfigError, match="GROQ_API_KEY"):
         live.validate_live()
+
+
+def test_judge_defaults_to_different_model_family(monkeypatch):
+    monkeypatch.setenv("MOCK_MODE", "false")
+    monkeypatch.setenv("PROVIDER", "groq")
+    monkeypatch.setenv("MODEL", "")
+    monkeypatch.delenv("JUDGE_PROVIDER", raising=False)
+    monkeypatch.delenv("JUDGE_MODEL", raising=False)
+    live = Config.from_env()
+    assert live.judge_provider == "groq"
+    assert live.judge_model != live.model
+
+
+def test_live_mode_requires_judge_provider_key(monkeypatch):
+    monkeypatch.setenv("MOCK_MODE", "false")
+    monkeypatch.setenv("PROVIDER", "groq")
+    monkeypatch.setenv("GROQ_API_KEY", "gsk-test")
+    monkeypatch.setenv("JUDGE_PROVIDER", "anthropic")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://x")
+    with pytest.raises(ConfigError, match="ANTHROPIC_API_KEY"):
+        Config.from_env().validate_live()
+
+
+async def test_run_records_answers_and_judge():
+    cases = load_test_cases("test_cases/meridian_advisor.yaml")
+    run = await run_all(cases)
+    assert run.judge_model == config.judge_model
+    assert all(r.model_output for r in run.results)
+
+
+def test_suite_cases_have_categories():
+    cases = load_test_cases("test_cases/meridian_advisor.yaml")
+    assert len(cases) >= 30
+    assert len({c.id for c in cases}) == len(cases)
+    assert all(c.category != "general" for c in cases)

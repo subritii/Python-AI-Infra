@@ -49,6 +49,7 @@ jobs:
           MOCK_MODE: "false"
           PROVIDER: "groq"
           MODEL: "openai/gpt-oss-120b"
+          JUDGE_MODEL: "qwen/qwen3.8-27b"
           BASELINE_RUN_ID: ${{ secrets.BASELINE_RUN_ID }}
           MAX_CONCURRENT_CALLS: "1"
           JUDGE_TEMPERATURE: "0.0"

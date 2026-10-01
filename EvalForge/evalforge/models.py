@@ -10,6 +10,7 @@ class TestCase:
     topic: str
     prompt: str
     expected_output: str
+    category: str = "general"
     metric: str = "llm_judge"
     difficulty: int = 1
     tags: list = field(default_factory=list)
@@ -35,6 +36,7 @@ class EvalRun:
     model_version: str
     temperature: float
     prompt_hash: str = ""
+    judge_model: str = ""
     results: list = field(default_factory=list)
     total_cost: float = 0.0
     pass_rate: float = 0.0
