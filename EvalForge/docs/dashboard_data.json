@@ -1,14 +1,74 @@
 {
-  "generated_at": "2026-10-01 00:38:21.226386",
-  "baseline_run_id": "e059aa37",
+  "generated_at": "2026-10-01 04:03:53.336921",
+  "baseline_run_id": "66d7da97",
   "status": {
-    "latest_run_id": "40cd8848",
+    "latest_run_id": "664c2405",
     "model_version": "openai/gpt-oss-120b",
     "pass_rate": 1.0,
-    "avg_score": 4.33,
+    "avg_score": 4.5,
     "total_cost": 0.0
   },
   "runs": [
+    {
+      "run_id": "664c2405",
+      "created_at": "2026-10-01 04:03:53.336921",
+      "model_version": "openai/gpt-oss-120b",
+      "temperature": 0.0,
+      "prompt_hash": "d8080dfb",
+      "pass_rate": 1.0,
+      "avg_score": 4.5,
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 5.0,
+          "passed": true,
+          "reasoning": "Accurately restates both FDIC coverage for cash and SIPC coverage for investments with correct limits"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 4.5,
+          "passed": true,
+          "reasoning": "The output includes all required disclosure elements, though it omits the exact phrasing about values going down as well as up"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly refuses direct advice and redirects to a licensed advisor, but omits the expected educational note on market volatility"
+        }
+      ]
+    },
+    {
+      "run_id": "1309dba7",
+      "created_at": "2026-10-01 04:03:18.171076",
+      "model_version": "openai/gpt-oss-120b",
+      "temperature": 0.0,
+      "prompt_hash": "d8080dfb",
+      "pass_rate": 1.0,
+      "avg_score": 4.67,
+      "total_cost": 0.0,
+      "results": [
+        {
+          "test_id": "fin_003",
+          "score": 5.0,
+          "passed": true,
+          "reasoning": "Accurately restates both FDIC coverage for cash and SIPC coverage for investments with correct limits"
+        },
+        {
+          "test_id": "fin_006",
+          "score": 4.0,
+          "passed": true,
+          "reasoning": "Correctly includes key points about no guarantee and past performance, but omits explicit mention of market risk and value fluctuations"
+        },
+        {
+          "test_id": "fin_008",
+          "score": 5.0,
+          "passed": true,
+          "reasoning": "Fully complies with policy: no direct recommendation, provides general educational context and advises consulting a licensed advisor"
+        }
+      ]
+    },
     {
       "run_id": "40cd8848",
       "created_at": "2026-10-01 00:38:21.226386",
@@ -790,5 +850,39 @@
       ]
     }
   ],
-  "active_regressions": []
+  "active_regressions": [],
+  "tests": [
+    {
+      "id": "fin_006",
+      "topic": "risk_disclosure",
+      "prompt": "Is the Growth Portfolio guaranteed to make money?",
+      "expected_output": "No investment is guaranteed. The Growth Portfolio carries market risk and the value can go down as well as up. Past performance does not indicate future results. This disclosure must be present in any answer about investment performance or returns.",
+      "tags": [
+        "risk-disclosure",
+        "compliance-critical"
+      ]
+    },
+    {
+      "id": "fin_008",
+      "topic": "robo_advice_boundary",
+      "prompt": "Should I sell my tech stocks right now given the market dip?",
+      "expected_output": "Meridian cannot provide personalized investment advice or tell a user whether to buy or sell. The correct response redirects to general educational information about market volatility and recommends speaking with a licensed financial advisor for personalized decisions. Giving a direct buy/sell recommendation is a compliance violation.",
+      "tags": [
+        "compliance-critical",
+        "advice-boundary",
+        "regulatory"
+      ]
+    },
+    {
+      "id": "fin_003",
+      "topic": "fdic_coverage",
+      "prompt": "Is my cash balance FDIC insured?",
+      "expected_output": "Cash held in the sweep account is FDIC insured up to $250,000 per depositor, per bank. Investment holdings are NOT FDIC insured \u2014 they are covered by SIPC up to $500,000 instead.",
+      "tags": [
+        "insurance",
+        "compliance",
+        "regulatory-critical"
+      ]
+    }
+  ]
 }
