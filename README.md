@@ -14,11 +14,11 @@ YAML test cases → model call → judge call → EvalRun → Postgres → dashb
                    (bounded concurrency)   (validated JSON, retries)   (regression gate)
 ```
 
-## Live dashboard
+## Live demo
 
-**[subritii.github.io/Python-AI-Infra](https://subritii.github.io/Python-AI-Infra/)** shows per-test judge
-scores across every run, the model, prompt and temperature changes that moved them, and the judge's
-reasoning. CI rebuilds it on every push to `main`.
+**[subritii.github.io/Python-AI-Infra](https://subritii.github.io/Python-AI-Infra/)** walks through how the
+pipeline works and replays, step by step, the real regression described below: per-test judge scores across
+every run, what the gate decided at each change, and the judge's reasoning. CI rebuilds it on every push to `main`.
 
 ## What it caught
 
