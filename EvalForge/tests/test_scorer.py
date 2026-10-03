@@ -86,3 +86,34 @@ async def test_rate_limited_call_waits_and_retries(monkeypatch):
     monkeypatch.setattr("evalforge.client.asyncio.sleep", fake_sleep)
     r = await c.call("hi")
     assert r.text == "ok" and len(calls) == 3 and sleeps == [3.5, 3.5]
+
+
+@pytest.mark.parametrize("msg, seconds", [
+    ("Please try again in 30.754s.", 31.754),
+    ("Please try again in 1m16.896s.", 77.896),
+    ("Please try again in 2h3m4s.", 7385.0),
+    ("no hint here", 60.0),
+])
+def test_retry_after_parses_groq_waits(msg, seconds):
+    assert EvalForgeClient._retry_after(Exception(msg)) == pytest.approx(seconds)
+
+
+async def test_daily_quota_fails_fast(monkeypatch):
+    class RateLimited(Exception):
+        status_code = 429
+
+    c = EvalForgeClient("groq", "m")
+    c.mock_mode = False
+    sleeps = []
+
+    async def fake_groq(*args):
+        raise RateLimited("Rate limit reached on tokens per day (TPD). Please try again in 1m16.896s.")
+
+    async def fake_sleep(s):
+        sleeps.append(s)
+
+    monkeypatch.setattr(c, "_groq_call", fake_groq)
+    monkeypatch.setattr("evalforge.client.asyncio.sleep", fake_sleep)
+    with pytest.raises(RuntimeError, match="daily quota"):
+        await c.call("hi")
+    assert sleeps == []
