@@ -332,6 +332,19 @@
   //   setsBaseline  "first" | "last": that run becomes the baseline for later eras
   //   focusFromPrev keep the previous era's focus test (follow a regression through its fix)
   const STORY = {
+    "openai/gpt-oss-120b|0|qwen/qwen3.8-27b#3": {
+      short: "Catching drift",
+      title: "The gate catches a quieter regression",
+      setsBaseline: "first",
+      caughtDrift: true,
+      body: (c) => c.caught ? [
+        `A day after the fix, CI failed on the merge: ${topic(c.caught.t)} dropped ${fmtScore(c.caught.a)} → ` +
+        `${fmtScore(c.caught.b)} against the baseline. Re-running it gave the same answer 4 times out of 5: the model ` +
+        `still refused the transfer, but no longer told users where they could make it. That was drift, not noise.`,
+        `One more rule (send account actions to the Meridian app or website) fixed it. Run ${c.first.run_id} passed ` +
+        `${c.passed} of ${c.n}, and the gate passed against the previous baseline.`
+      ] : [`A further prompt revision. Run ${c.first.run_id} passed ${c.passed} of ${c.n}.`],
+    },
     "openai/gpt-oss-120b|0|qwen/qwen3.8-27b#2": {
       short: "Fixing the failures",
       title: "Fixing what the suite found",
@@ -549,6 +562,22 @@
         c.toScore = fmtScore(keyRun.scores[c.focus]);
       }
 
+      // Drift era: find the first run in the previous era that the gate failed against the baseline
+      // in effect then (still `baseline` here; it's only advanced at the end of this chapter).
+      if (story && story.caughtDrift && baseline) {
+        for (const r of prev.runs) {
+          if (r === baseline) continue;
+          const g = gate(baseline, r, ctx.allTests);
+          const hit = g.rows.find((x) => x.regressed);
+          if (hit) {
+            c.caught = { ...hit, run: r };
+            const x = r.byTest[hit.t];
+            if (x && x.reasoning) c.quote = { text: x.reasoning, test: hit.t, run: r };
+            break;
+          }
+        }
+      }
+
       // Suite-change era: summarise the first full run by category. No gate verdict here: scores
       // from a new judge aren't comparable with the old judge's baseline, so this run becomes the baseline.
       if (story && story.suite) {
@@ -574,9 +603,12 @@
         c.key_i = first.i;
       }
 
-      c.short = story ? story.short : `${shortModel(first.model_version)} · temp ${first.temperature}`;
-      c.title = story ? story.title : `${shortModel(first.model_version)} at temperature ${first.temperature}`;
+      c.short = story ? story.short
+        : s.version > 1 ? `Prompt v${s.version}` : `${shortModel(first.model_version)} · temp ${first.temperature}`;
+      c.title = story ? story.title
+        : s.version > 1 ? `Prompt revision ${s.version}` : `${shortModel(first.model_version)} at temperature ${first.temperature}`;
       c.body = story ? story.body(c)
+        : s.version > 1 ? [`The system prompt was revised. Run ${first.run_id} passed ${c.passed} of ${c.n}.`]
         : [`${s.runs.length} runs on ${shortModel(first.model_version)} at temperature ${first.temperature}, ` +
            `with an average pass rate of ${c.avgPass}%.`];
       c.dates = fmtDay(first.date) + (fmtDay(first.date) === fmtDay(last.date) ? "" : " – " + fmtDay(last.date));
