@@ -114,7 +114,7 @@
 
   /* Story */
   .chapters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-  .chap { flex: 1 1 150px; text-align: left; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
+  .chap { flex: 1 1 120px; text-align: left; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
           background: var(--surface); color: var(--ink-2); cursor: pointer; font: inherit; font-size: 13px; line-height: 1.35; }
   .chap b { display: block; color: var(--ink); font-size: 13.5px; }
   .chap[aria-selected="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); color: var(--ink); }
@@ -332,6 +332,18 @@
   //   setsBaseline  "first" | "last": that run becomes the baseline for later eras
   //   focusFromPrev keep the previous era's focus test (follow a regression through its fix)
   const STORY = {
+    "openai/gpt-oss-120b|0|qwen/qwen3.8-27b#2": {
+      short: "Fixing the failures",
+      title: "Fixing what the suite found",
+      setsBaseline: "first",
+      body: (c) => [
+        `New rules went into the system prompt, one per failure pattern: never state a fee, rate or return that isn't ` +
+        `in the product facts; stay on topic; warn users who share sensitive data; offer help after declining.`,
+        `The first draft fixed every failure but made the model refuse the tax question without explaining anything ` +
+        `(5.0 → 3.0), a drop the gate would have blocked. A final rule keeps it teaching general concepts when it ` +
+        `declines personal advice. Run ${c.first.run_id} passed ${c.passed} of ${c.n}, up from ${c.prevPassed}.`
+      ],
+    },
     "openai/gpt-oss-120b|0|qwen/qwen3.8-27b": {
       short: "Bigger suite",
       title: "A bigger suite and an independent judge",
@@ -476,23 +488,30 @@
     return { rows, failed: rows.some((r) => r.regressed) };
   }
 
-  // One chapter per contiguous (model, temperature) era, then a final "today" view of everything.
+  // One chapter per contiguous era (model, temperature, judge, prompt), then a final "today" view.
+  // A prompt change within the same setup becomes a new version of it: "<setup>#2", "#3", ...
   function buildChapters(ctx) {
     const { runs, tests } = ctx;
     const segs = [];
     for (const r of runs) {
-      const key = `${r.model_version}|${r.temperature}|${r.judge_model || "self"}`;
+      const base = `${r.model_version}|${r.temperature}|${r.judge_model || "self"}`;
       const last = segs[segs.length - 1];
-      if (last && last.key === key) last.runs.push(r); else segs.push({ key, runs: [r] });
+      if (last && last.base === base && last.hash === r.prompt_hash) { last.runs.push(r); continue; }
+      const version = last && last.base === base ? last.version + 1 : 1;
+      segs.push({ base, hash: r.prompt_hash, version, key: `${base}#${version}`, runs: [r] });
     }
     let baseline = null, prevChapter = null;
     const chapters = segs.map((s, k) => {
       const prev = k > 0 ? segs[k - 1] : null;
       const first = s.runs[0], last = s.runs[s.runs.length - 1];
-      const story = STORY[s.key];
+      const story = STORY[s.key] || (s.version === 1 ? STORY[s.base] : undefined);
       const c = { key: s.key, runs: s.runs, first, last, range: [first.i, last.i] };
 
       c.avgPass = Math.round(100 * s.runs.reduce((a, r) => a + r.pass_rate, 0) / s.runs.length);
+      const passCount = (r) => (r.results || []).filter((x) => x.score >= PASS).length;
+      c.n = (first.results || []).length;
+      c.passed = passCount(first);
+      c.prevPassed = prev ? passCount(prev.runs[prev.runs.length - 1]) : null;
       c.worst = tests.map((t) => {
         const scored = s.runs.filter((r) => r.scores[t] != null);
         const failed = scored.filter((r) => r.scores[t] < PASS);
@@ -507,7 +526,8 @@
       if (prev) {
         const before = baseline || prev.runs[prev.runs.length - 1];
         keyRun = story && story.compareLast ? last : first;
-        c.compare = { before, after: keyRun, ...gate(before, keyRun, tests) };
+        const gateTests = (keyRun.results || []).length > tests.length ? ctx.allTests : tests;
+        c.compare = { before, after: keyRun, ...gate(before, keyRun, gateTests) };
         const mover = c.compare.rows.slice().sort((a, b) => Math.abs(b.d) - Math.abs(a.d))[0];
         c.focus = story && story.focusFromPrev && prevChapter.focus ? prevChapter.focus
                 : mover && Math.abs(mover.d) >= 0.5 ? mover.t : null;
@@ -686,15 +706,18 @@
       const ul = el("ul");
       // A full-suite gate lists only what dropped; short lists show every test.
       const long = c.compare.rows.length > 6;
-      const shown = long ? c.compare.rows.filter((r) => r.regressed) : c.compare.rows;
+      const shown = long ? c.compare.rows.filter((r) => Math.abs(r.d) >= GATE_DROP)
+                                            .sort((a, b) => (b.regressed - a.regressed) || (b.d - a.d)) : c.compare.rows;
       if (long) {
-        const dropped = shown.length;
+        const dropped = c.compare.rows.filter((r) => r.regressed).length;
+        const improved = c.compare.rows.filter((r) => r.d >= GATE_DROP).length;
         ul.append(el("li", { class: "flat" }, `${c.compare.rows.length} tests compared · ` +
-          (dropped ? `${dropped} dropped ${GATE_DROP.toFixed(1)} or more` : `none dropped ${GATE_DROP.toFixed(1)} or more`)));
+          (improved ? `${improved} up by ${GATE_DROP.toFixed(1)}+ · ` : "") +
+          (dropped ? `${dropped} dropped ${GATE_DROP.toFixed(1)}+` : `none dropped ${GATE_DROP.toFixed(1)}+`)));
       }
       for (const r of shown) {
         const li = el("li");
-        const sw = el("span", { class: "swatch" }); sw.style.background = `var(${ctx.color[r.t]})`;
+        const sw = el("span", { class: "swatch" }); sw.style.background = `var(${ctx.color[r.t] || "--axis"})`;   // only charted tests have a series colour
         const cls = r.regressed ? "down" : r.d > 0 ? "up" : "flat";
         li.append(sw, el("span", { class: "t" }, topic(r.t)), el("span", {}, fmtScore(r.a) + " → " + fmtScore(r.b)),
           el("span", { class: cls, style: "min-width:68px;text-align:right" },

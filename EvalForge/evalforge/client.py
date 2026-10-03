@@ -18,11 +18,15 @@ class EvalForgeClient:
     INPUT_COST  = 0.000003
     OUTPUT_COST = 0.000015
 
-    # Rate-limit (429) and transient errors are retried by the SDKs with exponential
-    # backoff that honours Retry-After; Groq's free tier allows 8k tokens/min per model.
-    MAX_RETRIES = 8
-    # The SDK's backoff tops out in seconds; per-minute token windows can need longer.
+    # The SDKs retry transient failures (connection errors, 5xx) with backoff. Rate limits
+    # (429) are handled below instead, because the right response depends on which limit hit.
+    MAX_RETRIES = 2
+    # Per-minute limits (Groq free tier: ~8k tokens/min per model) clear within a minute,
+    # so wait and retry. Longer waits mean a daily quota: fail fast with a clear error.
     RATE_LIMIT_RETRIES = 4
+    MAX_RATE_LIMIT_WAIT = 90.0
+    # SDK default is 10 minutes per attempt; a stalled connection should fail fast and retry.
+    REQUEST_TIMEOUT = 60.0
 
     def __init__(self, provider: str, model: str):
         self.mock_mode = config.mock_mode
@@ -34,14 +38,16 @@ class EvalForgeClient:
         if not self.mock_mode and self.provider == "anthropic" and config.anthropic_api_key:
             import anthropic
             self._client = anthropic.AsyncAnthropic(
-                api_key=config.anthropic_api_key, max_retries=self.MAX_RETRIES
+                api_key=config.anthropic_api_key, max_retries=self.MAX_RETRIES,
+                timeout=self.REQUEST_TIMEOUT
             )
         elif not self.mock_mode and self.provider == "groq" and config.groq_api_key:
             from openai import AsyncOpenAI
             self._client = AsyncOpenAI(
                 api_key=config.groq_api_key,
                 base_url="https://api.groq.com/openai/v1",
-                max_retries=self.MAX_RETRIES
+                max_retries=self.MAX_RETRIES,
+                timeout=self.REQUEST_TIMEOUT
             )
 
     def _mock_call(self, prompt: str, system: str = "") -> APIResponse:
@@ -147,13 +153,24 @@ class EvalForgeClient:
             except Exception as e:
                 if getattr(e, "status_code", None) != 429 or attempt == self.RATE_LIMIT_RETRIES:
                     raise
-                await asyncio.sleep(self._retry_after(e))
+                wait = self._retry_after(e)
+                if "per day" in str(e) or wait > self.MAX_RATE_LIMIT_WAIT:
+                    raise RuntimeError(
+                        f"{self.provider} daily quota exhausted for {self.model} "
+                        f"(retry in ~{wait / 60:.0f} min): {e}"
+                    ) from e
+                await asyncio.sleep(wait)
 
     @staticmethod
     def _retry_after(error: Exception) -> float:
-        # Groq says e.g. "Please try again in 30.754s"; fall back to a full minute window.
-        match = re.search(r"try again in ([\d.]+)s", str(error))
-        return float(match.group(1)) + 1 if match else 60.0
+        # Groq says e.g. "Please try again in 30.754s", "1m16.9s" or "2h3m4s".
+        match = re.search(r"try again in ((?:\d+h)?(?:\d+m)?(?:[\d.]+s)?)", str(error))
+        if not match or not match.group(1):
+            return 60.0
+        parts = {unit: value for value, unit in re.findall(r"([\d.]+)([hms])", match.group(1))}
+        seconds = (float(parts.get("h", 0)) * 3600 + float(parts.get("m", 0)) * 60
+                   + float(parts.get("s", 0)))
+        return seconds + 1
     
 
 client       = EvalForgeClient(config.provider, config.model)              # model under test
