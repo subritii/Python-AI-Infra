@@ -50,6 +50,11 @@ fixed all 7 but made the model refuse a tax question without explaining anything
 would have blocked. A final rule keeps it explaining general concepts when it declines personal advice. Result:
 **30 of 30** in three separate runs, with no test dropping against the baseline.
 
+**Then the gate caught drift.** The day after that fix merged, CI failed: the transfer-request test (`sec_004`) dropped
+4.5 → 3.5. Re-running it gave the same answer 4 times out of 5: the model still refused the transfer but no longer
+told users where they could make it. Nothing in the repo had changed; the model's typical answer had shifted. One
+more rule (send account actions to the Meridian app or website) fixed it, back to 30 of 30.
+
 ## Quick start (demo mode: offline, no keys, no database)
 
 ```bash
